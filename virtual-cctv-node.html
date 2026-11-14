@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPERION — Virtual CCTV Node | Live Examination Surveillance</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cctv: {
+              bg: '#090d16',
+              surface: '#0f172a',
+              card: '#131e36',
+              border: '#1e293b',
+              accent: '#38bdf8',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e'
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom CCTV Scanline & HUD Grids */
+    .cctv-scanlines {
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.35) 50%
+      ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.04),
+        rgba(0, 255, 0, 0.02),
+        rgba(0, 0, 255, 0.04)
+      );
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+
+    .cctv-grid-bg {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    }
+
+    /* Video Filters */
+    .filter-normal { filter: none; }
+    .filter-night { filter: invert(0.1) hue-rotate(90deg) saturate(2.2) brightness(1.15) contrast(1.2); }
+    .filter-mono { filter: grayscale(1) contrast(1.4) brightness(0.9); }
+    .filter-thermal { filter: contrast(1.8) invert(0.9) hue-rotate(180deg) saturate(3); }
+
+    /* Corner Bracket HUD */
+    .hud-bracket {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+      border-color: rgba(56, 189, 248, 0.85);
+    }
+    .hud-tl { top: 14px; left: 14px; border-top: 2.5px solid; border-left: 2.5px solid; }
+    .hud-tr { top: 14px; right: 14px; border-top: 2.5px solid; border-right: 2.5px solid; }
+    .hud-bl { bottom: 14px; left: 14px; border-bottom: 2.5px solid; border-left: 2.5px solid; }
+    .hud-br { bottom: 14px; right: 14px; border-bottom: 2.5px solid; border-right: 2.5px solid; }
+
+    /* Radar sweep animation for standby mode */
+    @keyframes radarSweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .radar-beam {
+      animation: radarSweep 4s linear infinite;
+      transform-origin: center center;
+    }
+
+    /* Pulse glow */
+    @keyframes subtleGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.15); }
+      50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.35); }
+    }
+    .cctv-container-glow {
+      animation: subtleGlow 3s ease-in-out infinite;
+    }
+
+    /* Audio visualizer bar animation */
+    @keyframes audioPulse {
+      0%, 100% { height: 20%; }
+      50% { height: 95%; }
+    }
+    .audio-bar-live {
+      animation: audioPulse 0.4s ease-in-out infinite alternate;
+    }
+  </style>
+</head>
+
+<body class="bg-[#070b14] text-slate-100 min-h-screen flex flex-col font-sans selection:bg-sky-500 selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- TOP TELEMETRY STRIP                       -->
+  <!-- ========================================== -->
+  <header class="border-b border-slate-800/80 bg-[#0b1120]/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2.5 text-xs text-slate-400 hover:text-white transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg mr-2">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>OPERION Portal</span>
+        </a>
+
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 border border-sky-400/30">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+            OPERION <span class="text-sky-400 font-mono text-xs font-normal">v2.4 SECURE NODE</span>
+          </h1>
+          <p class="text-[11px] text-slate-400 font-medium">Examination Hall Surveillance &amp; Optical Proctoring Node</p>
+        </div>
+      </div>
+
+      <!-- Time & Quick Telemetry -->
+      <div class="flex items-center gap-4 text-xs font-mono">
+        <div class="hidden sm:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span>LATENCY: <strong id="header-latency" class="text-emerald-400">12ms</strong></span>
+          <span class="text-slate-600">|</span>
+          <span>SYNC: <strong class="text-sky-400">NTP LOCK</strong></span>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="header-clock" class="text-emerald-400 font-bold">14:45:00 IST</span>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- MAIN COMPONENT CANVAS                     -->
+  <!-- ========================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center">
+
+    <!-- ======================================================== -->
+    <!-- COMPONENT: VIRTUAL CCTV NODE (Clean, Modern, Dark-Themed)-->
+    <!-- ======================================================== -->
+    <div id="operion-cctv-node" class="w-full max-w-4xl bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl cctv-container-glow">
+
+      <!-- 1. COMPONENT HEADER -->
+      <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800/90 flex flex-wrap items-center justify-between gap-3">
+        
+        <!-- Header Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-lg shadow-inner">
+            📹
+          </div>
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h2 class="text-base sm:text-lg font-bold tracking-tight text-white">OPERION CCTV Node</h2>
+              <span class="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Simulated Hall 01</span>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Real-time optical vigilance feed &amp; examination desk proctoring</p>
+          </div>
+        </div>
+
+        <!-- Header Status Badge (Initially 'Standby') -->
+        <div class="flex items-center gap-3">
+          <div id="cctv-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold tracking-wide transition-all duration-300">
+            <span id="cctv-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span id="cctv-status-text">Standby</span>
+          </div>
+
+          <!-- Diagnostic Signal Indicator -->
+          <div class="hidden sm:flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-slate-950/60 px-2.5 py-1 rounded-md border border-slate-800">
+            <span class="text-slate-500">SIGNAL:</span>
+            <span id="cctv-signal-bars" class="text-sky-400 font-bold">100% OK</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 2. VIDEO VIEWPORT -->
+      <div class="relative bg-black w-full aspect-video sm:min-h-[420px] overflow-hidden flex items-center justify-center group select-none">
+        
+        <!-- HTML5 Video Tag for Live Webcam Feed -->
+        <video 
+          id="cctv-video" 
+          autoplay 
+          playsinline 
+          muted 
+          class="w-full h-full object-cover filter-normal hidden transition-all duration-300">
+        </video>
+
+        <!-- Canvas for Snapshot Capture (hidden) -->
+        <canvas id="cctv-snapshot-canvas" class="hidden"></canvas>
+
+        <!-- Standby Graphic Screen (Visible when Camera is Off) -->
+        <div id="cctv-standby-screen" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center cctv-grid-bg bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950">
+          
+          <!-- Cybernetic Radar Aperture Icon -->
+          <div class="relative w-28 h-28 sm:w-32 sm:h-32 mb-4 flex items-center justify-center">
+            <!-- Outer Ring -->
+            <div class="absolute inset-0 rounded-full border border-sky-500/20 border-dashed"></div>
+            <!-- Middle Ring -->
+            <div class="absolute inset-3 rounded-full border border-slate-700/60"></div>
+            <!-- Inner Glowing Aperture -->
+            <div class="absolute inset-7 rounded-full bg-slate-900 border border-slate-700/90 flex items-center justify-center shadow-lg shadow-sky-950/50">
+              <i data-lucide="video-off" class="w-8 h-8 text-slate-500"></i>
+            </div>
+            <!-- Rotating Sweep Beam -->
+            <div class="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+              <div class="w-full h-full radar-beam bg-gradient-to-tr from-transparent via-transparent to-sky-500/20 rounded-full"></div>
+            </div>
+          </div>
+
+          <h3 class="text-base sm:text-lg font-bold text-slate-200 tracking-tight">Camera Feed in Standby</h3>
+          <p class="text-xs sm:text-sm text-slate-400 max-w-md mt-1 mb-4 leading-relaxed">
+            Local optical node has not commenced transmission. Click <span class="text-sky-400 font-semibold">'Start Local Camera Feed'</span> below to authorize web camera access.
+          </p>
+
+          <div class="flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-slate-400">
+            <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded">DEVICE: WebRTC v1.0</span>
+            <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded">ENCRYPTION: AES-GCM 256</span>
+            <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded">CCTV ID: OPERION-CAM-H01</span>
+          </div>
+
+        </div>
+
+        <!-- Scanline Overlay -->
+        <div class="cctv-scanlines absolute inset-0"></div>
+
+        <!-- HUD Corner Brackets -->
+        <div class="hud-bracket hud-tl"></div>
+        <div class="hud-bracket hud-tr"></div>
+        <div class="hud-bracket hud-bl"></div>
+        <div class="hud-bracket hud-br"></div>
+
+        <!-- TOP-LEFT: Dynamic Selected Corner Overlay Badge (Requested) -->
+        <div class="absolute top-4 left-4 z-20 flex flex-col gap-1.5">
+          <div id="cctv-corner-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/85 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold tracking-wide shadow-lg backdrop-blur-md">
+            <span id="corner-badge-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+            <span id="corner-badge-text">Corner A - Standby</span>
+          </div>
+          
+          <div id="cctv-location-subtag" class="hidden sm:inline-block px-2.5 py-0.5 rounded bg-slate-900/70 border border-slate-800 text-[10px] font-mono text-slate-400 backdrop-blur-sm">
+            LOC: FRONT-LEFT • HALL 01 • DESKS A1-C6
+          </div>
+        </div>
+
+        <!-- TOP-RIGHT: Live REC Badge, Timestamp & Telemetry -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-1.5">
+          <div class="flex items-center gap-2">
+            <!-- Recording Indicator (active when feed runs) -->
+            <div id="cctv-rec-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/20 border border-rose-500/50 text-rose-300 font-mono text-xs font-bold tracking-wider backdrop-blur-md">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <span>REC</span>
+            </div>
+
+            <!-- Resolution tag -->
+            <div class="px-2.5 py-1 rounded-md bg-slate-950/85 border border-slate-800 text-slate-300 font-mono text-xs backdrop-blur-md">
+              <span id="cctv-res-tag">1080P • 30 FPS</span>
+            </div>
+          </div>
+
+          <!-- Real-Time Timestamp with Milliseconds -->
+          <div class="px-2.5 py-1 rounded-md bg-slate-950/85 border border-slate-800 text-emerald-400 font-mono text-xs font-semibold tracking-wider backdrop-blur-md shadow-sm">
+            <span id="cctv-live-clock">14:45:00.000</span>
+          </div>
+        </div>
+
+        <!-- CENTER: Target Reticle (Subtle Crosshair) -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30">
+          <div class="relative w-20 h-20 border border-sky-400/40 rounded-full flex items-center justify-center">
+            <div class="w-2.5 h-2.5 bg-sky-400/60 rounded-full"></div>
+            <div class="absolute w-full h-[1px] bg-sky-400/30"></div>
+            <div class="absolute h-full w-[1px] bg-sky-400/30"></div>
+          </div>
+        </div>
+
+        <!-- BOTTOM-LEFT: Audio Level Meter Simulation -->
+        <div class="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-slate-950/85 border border-slate-800/80 px-2.5 py-1.5 rounded-lg backdrop-blur-md text-[11px] font-mono text-slate-300">
+          <i data-lucide="mic" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>MIC</span>
+          <div class="flex items-end gap-0.5 h-3 w-12 bg-slate-900 rounded px-0.5 py-0.5 overflow-hidden">
+            <div id="mic-bar-1" class="w-1 bg-emerald-400 rounded-sm" style="height: 30%"></div>
+            <div id="mic-bar-2" class="w-1 bg-emerald-400 rounded-sm" style="height: 50%"></div>
+            <div id="mic-bar-3" class="w-1 bg-emerald-400 rounded-sm" style="height: 40%"></div>
+            <div id="mic-bar-4" class="w-1 bg-amber-400 rounded-sm" style="height: 60%"></div>
+            <div id="mic-bar-5" class="w-1 bg-rose-400 rounded-sm" style="height: 20%"></div>
+          </div>
+          <span id="mic-db-text" class="text-[10px] text-slate-400">38 dB</span>
+        </div>
+
+        <!-- BOTTOM-RIGHT: Quick Viewport Action Tools -->
+        <div class="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-slate-950/85 border border-slate-800/80 p-1 rounded-lg backdrop-blur-md">
+          <button onclick="takeSnapshot()" title="Capture Surveillance Frame" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+          </button>
+          <button onclick="cycleFilter()" title="Cycle Optical Filter (Normal / Night / Mono / Thermal)" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+          <button onclick="toggleFullscreen()" title="Toggle Fullscreen Viewport" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors">
+            <i data-lucide="maximize" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Flash Overlay for Snapshot -->
+        <div id="cctv-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-150"></div>
+
+      </div>
+
+      <!-- 3. COMPONENT CONTROL DOCK -->
+      <div class="p-5 sm:p-6 bg-slate-950 border-t border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        
+        <!-- Left Section: Dropdown Selector (Corner A, B, C, D) -->
+        <div class="flex-1 max-w-md">
+          <label for="cctv-corner-select" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-sky-400"></i>
+              Examination Corner Angle Selector
+            </span>
+            <span class="text-[10px] text-slate-500 font-mono">4 FIXED PTZ NODES</span>
+          </label>
+
+          <div class="relative">
+            <select 
+              id="cctv-corner-select" 
+              onchange="handleCornerChange(this.value)"
+              class="w-full bg-slate-900 hover:bg-slate-850 text-slate-100 font-medium text-xs sm:text-sm rounded-xl border border-slate-700/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 px-3.5 py-2.5 pr-10 appearance-none transition-all cursor-pointer shadow-inner">
+              <option value="Corner A" data-sub="Front-Left • Hall 01" selected>Corner A (Front-Left - Hall 01)</option>
+              <option value="Corner B" data-sub="Front-Right • Hall 01">Corner B (Front-Right - Hall 01)</option>
+              <option value="Corner C" data-sub="Rear-Left • Hall 01">Corner C (Rear-Left - Hall 01)</option>
+              <option value="Corner D" data-sub="Rear-Right • Hall 01">Corner D (Rear-Right - Hall 01)</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Optical Preset Filter Selector -->
+        <div class="hidden lg:flex flex-col">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Optical Sensor Mode</span>
+          <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-1">
+            <button onclick="setFilter('normal')" id="filter-btn-normal" class="px-2.5 py-1 text-xs rounded-lg font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition-colors">Normal</button>
+            <button onclick="setFilter('night')" id="filter-btn-night" class="px-2.5 py-1 text-xs rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Night Vision</button>
+            <button onclick="setFilter('mono')" id="filter-btn-mono" class="px-2.5 py-1 text-xs rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">B&amp;W Mono</button>
+            <button onclick="setFilter('thermal')" id="filter-btn-thermal" class="px-2.5 py-1 text-xs rounded-lg font-semibold text-slate-400 hover:text-white transition-colors">Thermal</button>
+          </div>
+        </div>
+
+        <!-- Right Section: Action Toggle Button (Start/Stop Feed) -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <button 
+            id="cctv-toggle-btn" 
+            onclick="toggleCameraFeed()" 
+            class="flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-sky-600 via-sky-500 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-lg shadow-sky-600/25 active:scale-95 transition-all duration-200 border border-sky-400/40">
+            <i id="cctv-btn-icon" data-lucide="video" class="w-4 h-4"></i>
+            <span id="cctv-btn-text">Start Local Camera Feed</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 4. TELEMETRY & HALL AUDIT FOOTER -->
+      <div class="px-5 sm:px-6 py-3 bg-slate-950/70 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 gap-2">
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>HALL 01: <strong>40/40 SEATS OCCUPIED</strong></span>
+          </span>
+          <span class="hidden sm:inline text-slate-700">•</span>
+          <span class="hidden sm:inline">UFM PROCTOR: <strong>DR. A. MALHOTRA</strong></span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span id="cctv-pan-tilt-hud" class="text-slate-400">PAN: 42° | TILT: -18° | ZOOM: 1.0x</span>
+          <span class="text-emerald-400 font-bold">● TAMPER LOCK OK</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Snapshot Notification Toast -->
+    <div id="snapshot-toast" class="fixed bottom-6 right-6 hidden bg-slate-900 border border-sky-500/50 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce">
+      <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+        <i data-lucide="check" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <p class="text-xs font-bold">Surveillance Frame Captured</p>
+        <p class="text-[11px] text-slate-400">Timestamped proof archived to session audit trail.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT CONTROLLER                      -->
+  <!-- ========================================== -->
+  <script>
+    // Global State for CCTV Node
+    let mediaStream = null;
+    let isFeedActive = false;
+    let activeCorner = 'Corner A';
+    let currentFilter = 'normal';
+    const filterList = ['normal', 'night', 'mono', 'thermal'];
+
+    // DOM References
+    const videoEl = document.getElementById('cctv-video');
+    const standbyScreen = document.getElementById('cctv-standby-screen');
+    const toggleBtn = document.getElementById('cctv-toggle-btn');
+    const btnText = document.getElementById('cctv-btn-text');
+    const btnIcon = document.getElementById('cctv-btn-icon');
+    const statusBadge = document.getElementById('cctv-status-badge');
+    const statusDot = document.getElementById('cctv-status-dot');
+    const statusText = document.getElementById('cctv-status-text');
+    const cornerBadge = document.getElementById('cctv-corner-badge');
+    const cornerBadgeDot = document.getElementById('corner-badge-dot');
+    const cornerBadgeText = document.getElementById('corner-badge-text');
+    const cornerSelect = document.getElementById('cctv-corner-select');
+    const locationSubtag = document.getElementById('cctv-location-subtag');
+    const recBadge = document.getElementById('cctv-rec-badge');
+    const liveClockEl = document.getElementById('cctv-live-clock');
+    const headerClockEl = document.getElementById('header-clock');
+    const panTiltHud = document.getElementById('cctv-pan-tilt-hud');
+
+    // Hall Corner Telemetry Mapping
+    const cornerData = {
+      'Corner A': {
+        name: 'Corner A',
+        desc: 'Front-Left • Hall 01',
+        tag: 'LOC: FRONT-LEFT • HALL 01 • DESKS A1-C6',
+        pan: 'PAN: 42° | TILT: -18° | ZOOM: 1.0x',
+        latency: '11ms'
+      },
+      'Corner B': {
+        name: 'Corner B',
+        desc: 'Front-Right • Hall 01',
+        tag: 'LOC: FRONT-RIGHT • HALL 01 • DESKS A7-C12',
+        pan: 'PAN: 138° | TILT: -16° | ZOOM: 1.0x',
+        latency: '14ms'
+      },
+      'Corner C': {
+        name: 'Corner C',
+        desc: 'Rear-Left • Hall 01',
+        tag: 'LOC: REAR-LEFT • HALL 01 • DESKS D1-F6',
+        pan: 'PAN: 224° | TILT: -22° | ZOOM: 1.0x',
+        latency: '13ms'
+      },
+      'Corner D': {
+        name: 'Corner D',
+        desc: 'Rear-Right • Hall 01',
+        tag: 'LOC: REAR-RIGHT • HALL 01 • DESKS D7-F12',
+        pan: 'PAN: 315° | TILT: -20° | ZOOM: 1.0x',
+        latency: '15ms'
+      }
+    };
+
+    // Update Live Clock with Milliseconds
+    function updateClock() {
+      const now = new Date();
+      const hrs = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const secs = String(now.getSeconds()).padStart(2, '0');
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      
+      if (liveClockEl) {
+        liveClockEl.textContent = `${hrs}:${mins}:${secs}.${ms}`;
+      }
+      if (headerClockEl) {
+        headerClockEl.textContent = `${hrs}:${mins}:${secs} IST`;
+      }
+      requestAnimationFrame(updateClock);
+    }
+    requestAnimationFrame(updateClock);
+
+    // Audio Visualizer Simulation
+    setInterval(() => {
+      if (isFeedActive) {
+        const randomDb = 35 + Math.floor(Math.random() * 18);
+        document.getElementById('mic-db-text').textContent = `${randomDb} dB`;
+        for (let i = 1; i <= 5; i++) {
+          const el = document.getElementById(`mic-bar-${i}`);
+          if (el) {
+            const h = 20 + Math.floor(Math.random() * 75);
+            el.style.height = `${h}%`;
+          }
+        }
+      } else {
+        document.getElementById('mic-db-text').textContent = `Muted`;
+        for (let i = 1; i <= 5; i++) {
+          const el = document.getElementById(`mic-bar-${i}`);
+          if (el) el.style.height = `10%`;
+        }
+      }
+    }, 250);
+
+    // Update Corner Badge according to active/standby status
+    function updateCornerBadge() {
+      const data = cornerData[activeCorner] || cornerData['Corner A'];
+      if (isFeedActive) {
+        cornerBadgeText.textContent = `${data.name} - Active`;
+        cornerBadgeDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        cornerBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/85 border border-emerald-500/50 text-emerald-300 font-mono text-xs font-bold tracking-wide shadow-lg backdrop-blur-md';
+      } else {
+        cornerBadgeText.textContent = `${data.name} - Standby`;
+        cornerBadgeDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        cornerBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/85 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold tracking-wide shadow-lg backdrop-blur-md';
+      }
+      if (locationSubtag) {
+        locationSubtag.textContent = data.tag;
+      }
+      if (panTiltHud) {
+        panTiltHud.textContent = data.pan;
+      }
+      const latEl = document.getElementById('header-latency');
+      if (latEl) latEl.textContent = data.latency;
+    }
+
+    // Backend API & WebSocket Configuration
+    const OPERION_WS_BASE = 'wss://outputs-trips-separation-serious.trycloudflare.com';
+    let cctvWs = null;
+    let cctvInterval = null;
+    let offscreenCanvas = null;
+
+    function startStandaloneWS(cornerId) {
+      const cornerKey = (cornerId || activeCorner || 'Corner-A').replace(' ', '-');
+      stopStandaloneWS();
+
+      try {
+        const wsUrl = `${OPERION_WS_BASE}/ws/cctv/${cornerKey}`;
+        cctvWs = new WebSocket(wsUrl);
+
+        cctvWs.onopen = () => {
+          console.log(`[Virtual CCTV Node WS] Connected to ${wsUrl}`);
+          if (!offscreenCanvas) {
+            offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = 320;
+            offscreenCanvas.height = 240;
+          }
+          if (cctvInterval) clearInterval(cctvInterval);
+          cctvInterval = setInterval(() => {
+            if (cctvWs && cctvWs.readyState === WebSocket.OPEN && videoEl && isFeedActive && videoEl.readyState >= 2) {
+              const ctx = offscreenCanvas.getContext('2d');
+              ctx.drawImage(videoEl, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+              const dataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.6);
+              cctvWs.send(JSON.stringify({ frame: dataUrl }));
+            }
+          }, 800);
+        };
+
+        cctvWs.onmessage = (e) => {
+          try {
+            const res = JSON.parse(e.data);
+            const verdict = res.analysis || res;
+            if (verdict && statusText) {
+              statusText.textContent = verdict.status ? verdict.status.toUpperCase() : 'LIVE FEED';
+            }
+          } catch (err) {}
+        };
+      } catch (e) {
+        console.warn('WS error:', e);
+      }
+    }
+
+    function stopStandaloneWS() {
+      if (cctvInterval) {
+        clearInterval(cctvInterval);
+        cctvInterval = null;
+      }
+      if (cctvWs) {
+        try { cctvWs.close(); } catch(e){}
+        cctvWs = null;
+      }
+    }
+
+    // Handle Corner Dropdown Selector
+    function handleCornerChange(selectedVal) {
+      activeCorner = selectedVal;
+      
+      // Visual transition effect on video viewport (subtle PTZ switch feedback)
+      if (isFeedActive && videoEl) {
+        videoEl.classList.add('opacity-40', 'scale-[0.99]');
+        setTimeout(() => {
+          videoEl.classList.remove('opacity-40', 'scale-[0.99]');
+        }, 180);
+        startStandaloneWS(selectedVal);
+      }
+      
+      updateCornerBadge();
+    }
+
+    // Toggle Camera Feed (Start / Stop)
+    async function toggleCameraFeed() {
+      if (!isFeedActive) {
+        // START FEED
+        try {
+          btnText.textContent = 'Requesting Access...';
+          btnIcon.setAttribute('data-lucide', 'loader-2');
+          lucide.createIcons();
+
+          // Request webcam permission with ideal 1080p / 720p resolution
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user'
+            },
+            audio: false
+          });
+
+          mediaStream = stream;
+          videoEl.srcObject = stream;
+          videoEl.classList.remove('hidden');
+          standbyScreen.classList.add('hidden');
+
+          await videoEl.play();
+
+          isFeedActive = true;
+
+          // Update Button Styling -> 'Stop Camera Feed'
+          btnText.textContent = 'Stop Camera Feed';
+          btnIcon.setAttribute('data-lucide', 'square');
+          toggleBtn.className = 'flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-lg shadow-rose-600/30 active:scale-95 transition-all duration-200 border border-rose-400/40';
+
+          // Update Status Badge -> 'LIVE' / 'Active'
+          statusText.textContent = 'LIVE FEED';
+          statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+          statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-semibold tracking-wide transition-all duration-300';
+
+          // Show REC Indicator
+          recBadge.classList.remove('hidden');
+          recBadge.classList.add('flex');
+
+          // Update Corner Overlay Badge
+          updateCornerBadge();
+          lucide.createIcons();
+
+          // Start WebSocket transmission
+          startStandaloneWS(activeCorner);
+
+        } catch (err) {
+          console.error('Webcam access error:', err);
+          alert(`CCTV Webcam Error: ${err.name || 'Access Denied'}\n\nPlease check browser camera permissions in your address bar.`);
+          resetToStandby();
+        }
+      } else {
+        // STOP FEED
+        stopCameraFeed();
+      }
+    }
+
+    // Stop Camera Feed cleanly
+    function stopCameraFeed() {
+      stopStandaloneWS();
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      if (videoEl) {
+        videoEl.pause();
+        videoEl.srcObject = null;
+        videoEl.classList.add('hidden');
+      }
+      resetToStandby();
+    }
+
+    // Reset UI to Standby
+    function resetToStandby() {
+      stopStandaloneWS();
+      isFeedActive = false;
+      standbyScreen.classList.remove('hidden');
+      
+      // Reset Button -> 'Start Local Camera Feed'
+      btnText.textContent = 'Start Local Camera Feed';
+      btnIcon.setAttribute('data-lucide', 'video');
+      toggleBtn.className = 'flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-sky-600 via-sky-500 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-lg shadow-sky-600/25 active:scale-95 transition-all duration-200 border border-sky-400/40';
+
+      // Reset Status Badge -> 'Standby'
+      statusText.textContent = 'Standby';
+      statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+      statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold tracking-wide transition-all duration-300';
+
+      // Hide REC Indicator
+      recBadge.classList.add('hidden');
+      recBadge.classList.remove('flex');
+
+      // Update Corner Overlay Badge
+      updateCornerBadge();
+      lucide.createIcons();
+    }
+
+    // Optical Filters Handler
+    function setFilter(mode) {
+      currentFilter = mode;
+      filterList.forEach(f => {
+        videoEl.classList.remove(`filter-${f}`);
+        const btn = document.getElementById(`filter-btn-${f}`);
+        if (btn) {
+          btn.className = 'px-2.5 py-1 text-xs rounded-lg font-semibold text-slate-400 hover:text-white transition-colors';
+        }
+      });
+      videoEl.classList.add(`filter-${mode}`);
+      const activeBtn = document.getElementById(`filter-btn-${mode}`);
+      if (activeBtn) {
+        activeBtn.className = 'px-2.5 py-1 text-xs rounded-lg font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition-colors';
+      }
+    }
+
+    function cycleFilter() {
+      const nextIdx = (filterList.indexOf(currentFilter) + 1) % filterList.length;
+      setFilter(filterList[nextIdx]);
+    }
+
+    // Fullscreen Viewport Toggle
+    function toggleFullscreen() {
+      const container = document.getElementById('operion-cctv-node');
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {
+          console.warn('Fullscreen error:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Take Snapshot for Exam Audit
+    function takeSnapshot() {
+      const flash = document.getElementById('cctv-flash');
+      flash.classList.remove('opacity-0');
+      flash.classList.add('opacity-90');
+      setTimeout(() => {
+        flash.classList.remove('opacity-90');
+        flash.classList.add('opacity-0');
+      }, 120);
+
+      const toast = document.getElementById('snapshot-toast');
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // Initialize Icons and Initial State on Load
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateCornerBadge();
+    });
+  </script>
+</body>
+</html>

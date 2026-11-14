@@ -1,0 +1,13 @@
+{
+  "name": "operion",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "start": "python -m http.server 3000",
+    "streamlit": "streamlit run app.py"
+  },
+  "dependencies": {
+    "@paper-design/shaders-react": "^0.0.81",
+    "lucide-react": "^1.52.0"
+  }
+}
