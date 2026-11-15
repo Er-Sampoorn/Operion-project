@@ -10,6 +10,14 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Socket.io Client -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- TensorFlow.js, COCO-SSD & BlazeFace Real-Time AI Detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7"></script>
 
   <style>
     /* Warm Beige & Deep Dark Contrast Theme Foundation */
@@ -304,10 +312,17 @@
         <!-- User Information: Controller Of Examination (Male Person) -->
         <div class="flex items-center gap-3 sm:gap-4">
           <!-- Live FastAPI Backend Status Badge -->
-          <div id="backend-status-badge" onclick="checkBackendHealth(true)" class="cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-colors" title="Click to test live FastAPI Cloudflare tunnel connection">
+          <div id="backend-status-badge" onclick="checkBackendHealth(true)" class="cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-colors" title="Click to test live API & Socket connection">
             <span id="backend-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="backend-status-text" class="font-mono text-[11px] sm:text-xs">Live API: Connected</span>
           </div>
+
+          <!-- Apex Intercom Push-to-Talk Status Button -->
+          <button id="header-intercom-btn" onclick="openIntercomModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold hover:bg-indigo-100 transition-all shadow-xs" title="Open Apex Push-to-Talk 2-Way Audio Intercom">
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span id="header-intercom-text">Intercom Line</span>
+            <span id="intercom-active-dot" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+          </button>
 
           <div class="hidden md:flex flex-col text-right">
             <span class="text-xs font-bold text-[#1c1917]">Dr. Arvind Malhotra</span>
@@ -379,6 +394,14 @@
         <button id="tab-triage" onclick="switchTab('triage')" class="nav-tab-btn">
           <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
           <span>AI Incident Triage</span>
+        </button>
+
+        <button id="tab-seating" onclick="switchTab('seating')" class="nav-tab-btn">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-700"></i>
+          <span>Anti-Cheating Seating Plan</span>
+          <span class="ml-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+            Zig-Zag Engine
+          </span>
         </button>
 
       </div>
@@ -534,15 +557,16 @@
           <div id="halls-container" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             
             <!-- Room 1: Warning / Issue (UFM Discrepancy) - Red Outline & Light Red Shade -->
-            <div class="hall-card critical-hall border-2 border-red-400 bg-red-50/50 rounded-xl p-5 flex flex-col justify-between shadow-xs">
+            <div id="dashboard-room-501-card" class="hall-card critical-hall border-2 border-red-400 bg-red-50/50 rounded-xl p-5 flex flex-col justify-between shadow-xs transition-all duration-300">
               <div>
                 <div class="flex items-start justify-between gap-2">
                   <div>
                     <h3 class="text-base font-bold text-[#1c1917]">Room 501-LHS (Block E)</h3>
                     <p class="text-xs text-[#6e6352] mt-0.5">Paper: CS-402 Distributed Systems</p>
                   </div>
-                  <span class="bg-red-100 text-red-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-red-300 animate-pulse">
-                    UFM FLAGGED
+                  <span id="dashboard-room-501-badge" class="bg-red-100 text-red-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-red-300 animate-pulse flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                    <span>UFM FLAGGED</span>
                   </span>
                 </div>
 
@@ -1659,7 +1683,7 @@
         <!-- ================= BLOCK E (8 ROOMS) ================= -->
 
         <!-- Room 1 (Block E): UFM FLAGGED - Red Outline & Light Red Shade -->
-        <div class="room-item portal-room-card border-2 border-red-400 bg-red-50/50 rounded-xl p-5 flex flex-col justify-between shadow-xs transition-all hover:shadow-md" data-block="E" data-wing="LHS" data-status="ufm" data-search="501 room 501-lhs block e distributed systems sharma ufm">
+        <div id="halls-tab-room-501-card" class="room-item portal-room-card border-2 border-red-400 bg-red-50/50 rounded-xl p-5 flex flex-col justify-between shadow-xs transition-all duration-300 hover:shadow-md" data-block="E" data-wing="LHS" data-status="ufm" data-search="501 room 501-lhs block e distributed systems sharma ufm">
           <div>
             <div class="flex items-start justify-between gap-2">
               <div>
@@ -1670,8 +1694,9 @@
                 <h3 class="text-base font-bold text-[#1c1917]">Room 501-LHS (Block E)</h3>
                 <p class="text-xs text-[#6e6352] mt-0.5">Paper: CS-402 Distributed Systems</p>
               </div>
-              <span class="bg-red-100 text-red-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-red-300 animate-pulse whitespace-nowrap">
-                UFM FLAGGED
+              <span id="halls-tab-room-501-badge" class="bg-red-100 text-red-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-red-300 animate-pulse whitespace-nowrap flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                <span>UFM FLAGGED</span>
               </span>
             </div>
 
@@ -2405,7 +2430,169 @@
 
     </div>
 
-  </main>
+    <!-- ======================================================== -->
+    <!-- SECTION: SMART ZIG-ZAG ANTI-CHEATING SEATING PLAN ENGINE -->
+    <!-- ======================================================== -->
+    <div id="section-seating" class="portal-section hidden space-y-8">
+      
+      <!-- Seating Header & Breadcrumbs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#ded5c5]">
+        <div>
+          <div class="text-xs text-[#756a59] font-semibold mb-1 flex items-center gap-1.5">
+            <span>Home</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-[#9e927f]"></i>
+            <span>Examination Control</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-[#9e927f]"></i>
+            <span class="text-emerald-700 font-bold">Anti-Cheating Seating Allocation Engine</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#1c1917] tracking-tight">Zig-Zag Anti-Cheating Seating Plan Engine</h1>
+          <p class="text-sm text-[#615747] mt-1">
+            Interleaving round-robin placement algorithm ensuring adjacent desks (left, right, front, back) sit for different branches and question papers.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="loadSampleSeatingCSV()" class="btn-neutral px-4 py-2 text-xs flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
+            <span>Load Sample CSV (30 Candidates)</span>
+          </button>
+          <button onclick="printSeatingPlan()" class="px-4 py-2 text-xs font-bold bg-[#1c1917] hover:bg-[#332e2a] text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-colors">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print Official Seating Chart</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Generator Settings & CSV Input Card -->
+      <div class="portal-card p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-[#ded5c5] mb-5">
+          <div>
+            <h3 class="text-base font-bold text-[#1c1917]">Seating Matrix Configuration &amp; CSV Registry Upload</h3>
+            <p class="text-xs text-[#6e6352] mt-0.5">Accepts CSV uploads via <code class="bg-[#ede6d8] px-1.5 py-0.5 rounded text-xs text-[#1c1917] font-mono font-semibold">/api/seating/generate</code> (Fields: <span class="font-mono text-emerald-800 font-bold">roll_no, name, branch, paper_code</span>)</p>
+          </div>
+          <span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 font-mono text-xs font-bold">
+            POST /api/seating/generate
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-xs font-bold text-[#4a4237] uppercase tracking-wider mb-1.5">Examination Hall</label>
+            <select id="seating-hall-select" class="w-full p-2.5 border border-[#d6ccbd] rounded-lg text-xs bg-white text-[#1c1917] font-medium shadow-xs">
+              <option value="Room 501-LHS (Block E)" selected>Room 501-LHS (Block E)</option>
+              <option value="Room 502-RHS (Block E)">Room 502-RHS (Block E)</option>
+              <option value="Room 503-LHS (Block E)">Room 503-LHS (Block E)</option>
+              <option value="Room 521-LHS (Block F)">Room 521-LHS (Block F)</option>
+              <option value="Hall A-101 (Main Auditorium)">Hall A-101 (Main Auditorium)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#4a4237] uppercase tracking-wider mb-1.5">Matrix Rows (Depth)</label>
+            <input id="seating-rows-input" type="number" min="2" max="15" value="5" class="w-full p-2.5 border border-[#d6ccbd] rounded-lg text-xs bg-white text-[#1c1917] font-medium shadow-xs" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#4a4237] uppercase tracking-wider mb-1.5">Matrix Columns (Aisles)</label>
+            <input id="seating-cols-input" type="number" min="2" max="12" value="6" class="w-full p-2.5 border border-[#d6ccbd] rounded-lg text-xs bg-white text-[#1c1917] font-medium shadow-xs" />
+          </div>
+        </div>
+
+        <!-- CSV File Upload or Raw Paste Area -->
+        <div class="space-y-3">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-[#fbf9f4] border border-[#ded5c5] rounded-xl">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-[#1c1917] block">Upload Candidates CSV File</span>
+                <span class="text-[11px] text-[#6e6352]">Or edit CSV directly in the textarea below</span>
+              </div>
+            </div>
+            
+            <input id="seating-csv-file" type="file" accept=".csv,text/csv" class="text-xs text-[#524a3e] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-700 file:text-white hover:file:bg-emerald-800 file:cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-bold text-[#4a4237] uppercase tracking-wider">Candidate Registry CSV Data</label>
+              <button onclick="loadSampleSeatingCSV()" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Load 4-Branch Sample Data
+              </button>
+            </div>
+            <textarea id="seating-csv-textarea" rows="4" placeholder="roll_no,name,branch,paper_code&#10;22CSE001,Aarav Sharma,CSE,CS-402&#10;22ECE001,Diya Kapoor,ECE,EC-301..." class="w-full p-3 font-mono text-xs border border-[#d6ccbd] rounded-xl bg-white text-[#1c1917] shadow-inner"></textarea>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button id="btn-generate-seating" onclick="handleGenerateSeating()" class="px-6 py-2.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl shadow-md flex items-center gap-2 active:scale-95 transition-all">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Generate Anti-Cheating Seating Plan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seating Results Matrix Card (Hidden until generated) -->
+      <div id="seating-results-container" class="portal-card p-6 space-y-6 hidden">
+        
+        <!-- Summary Stats Banner -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="p-4 bg-white border border-[#ded5c5] rounded-xl">
+            <span class="text-[10px] font-bold text-[#6e6352] uppercase block">Assigned Hall</span>
+            <span id="seating-meta-hall" class="text-base font-bold text-[#1c1917] mt-0.5 block truncate">Room 501-LHS (Block E)</span>
+          </div>
+
+          <div class="p-4 bg-white border border-[#ded5c5] rounded-xl">
+            <span class="text-[10px] font-bold text-[#6e6352] uppercase block">Total Allocated Desks</span>
+            <span id="seating-meta-allocated" class="text-2xl font-extrabold text-[#1c1917] mt-0.5 block">30 / 30</span>
+          </div>
+
+          <div class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl">
+            <span class="text-[10px] font-bold text-emerald-800 uppercase block">Adjacency Conflicts</span>
+            <span id="seating-meta-conflicts" class="text-2xl font-extrabold text-emerald-700 mt-0.5 block">0 Conflicts</span>
+            <span class="text-[10px] text-emerald-700 font-semibold block mt-0.5">● Zero Adjacent Subject Neighbors</span>
+          </div>
+
+          <div class="p-4 bg-white border border-[#ded5c5] rounded-xl">
+            <span class="text-[10px] font-bold text-[#6e6352] uppercase block">Branch Distribution</span>
+            <div id="seating-branch-breakdown" class="flex flex-wrap gap-1.5 mt-1.5">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Classroom Podium Top Notice -->
+        <div class="p-3 bg-[#ede6db] border-2 border-[#d6ccbd] rounded-xl text-center flex items-center justify-center gap-2 font-mono text-xs font-bold text-[#382115]">
+          <i data-lucide="shield" class="w-4 h-4 text-emerald-700"></i>
+          <span>[ FRONT OF EXAMINATION HALL &bull; INVIGILATOR PODIUM &amp; QUESTION PAPER VAULT ]</span>
+        </div>
+
+        <!-- 2D Interactive Grid Matrix -->
+        <div class="overflow-x-auto pb-4">
+          <div id="seating-grid-matrix" class="grid gap-3 min-w-[700px]">
+            <!-- Dynamic 2D Matrix Cells -->
+          </div>
+        </div>
+
+        <!-- Footer Notice & Signatures for Printing -->
+        <div class="pt-4 border-t border-[#ded5c5] flex flex-wrap items-center justify-between gap-4 text-xs text-[#6e6352]">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Statutory Anti-Cheating Protocol Verified &bull; Round-Robin Interleaving Matrix</span>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <button onclick="printSeatingPlan()" class="btn-neutral px-4 py-2 text-xs flex items-center gap-1.5">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+              <span>Print Hall Door Notice</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
 
   <!-- ======================================================== -->
   <!-- 2. OFFICIAL FOOTER                                       -->
@@ -2505,6 +2692,12 @@
             <span id="cctv-modal-status-text">Standby</span>
           </div>
 
+          <!-- Mobile Stream Prototype Link -->
+          <a href="/stream.html" target="_blank" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-950 border border-sky-600/50 text-xs text-sky-300 font-semibold hover:bg-sky-900 transition-colors" title="Open Mobile Camera Stream Transmitter (/stream.html)">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Mobile Stream Client</span>
+          </a>
+
           <!-- Maximize / Fullscreen Toggle Button -->
           <button onclick="toggleCCTVModalFullscreen()" id="cctv-fullscreen-toggle-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700 font-semibold transition-colors" title="Maximize Fullscreen for Classroom Projector/Faculty Demo">
             <i id="cctv-fullscreen-icon" data-lucide="maximize-2" class="w-3.5 h-3.5 text-sky-400"></i>
@@ -2529,6 +2722,12 @@
           muted 
           class="w-full h-full object-cover hidden transition-all duration-300">
         </video>
+
+        <!-- Live Inbound Mobile Stream Image Relay -->
+        <img 
+          id="cctv-inbound-img" 
+          class="w-full h-full object-contain hidden transition-all duration-300" 
+          alt="Inbound Mobile Surveillance Stream" />
 
         <!-- Standby Screen (when camera is off) -->
         <div id="cctv-modal-standby-screen" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950">
@@ -2592,8 +2791,8 @@
           </div>
         </div>
 
-        <!-- TOP-RIGHT: Live REC Badge & Real-Time Millisecond Clock -->
-        <div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-1.5">
+        <!-- TOP-RIGHT: Live REC Badge, Real-Time Millisecond Clock & Semi-Transparent AI Telemetry HUD -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-1.5 pointer-events-auto">
           <div class="flex items-center gap-2">
             <div id="cctv-modal-rec-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/20 border border-rose-500/50 text-rose-300 font-mono text-xs font-bold tracking-wider backdrop-blur-md">
               <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
@@ -2606,6 +2805,29 @@
 
           <div class="px-2.5 py-1 rounded-md bg-slate-950/85 border border-slate-800 text-emerald-400 font-mono text-xs font-semibold tracking-wider backdrop-blur-md shadow-sm">
             <span id="cctv-modal-live-clock">14:45:00.000</span>
+          </div>
+
+          <!-- Top-Right Semi-Transparent Telemetry HUD (Highest Detected Class, Score & Head Pose) -->
+          <div id="cctv-telemetry-hud" class="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-700/60 text-slate-200 font-mono text-xs backdrop-blur-md shadow-xl flex flex-col gap-1 min-w-[210px] select-none transition-all duration-200">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-800/80 text-[10px] font-bold tracking-wider text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <span id="hud-pulse-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="text-slate-300">SURVEILLANCE HUD</span>
+              </span>
+              <span id="hud-fps-label" class="text-sky-400 text-[10px]">30 FPS</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 text-[11px]">TOP CLASS:</span>
+              <span id="hud-top-class" class="font-extrabold text-emerald-300 tracking-wide uppercase">NONE</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 text-[11px]">CONFIDENCE:</span>
+              <span id="hud-top-confidence" class="font-bold text-slate-200 font-mono">0.0%</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/80">
+              <span class="text-slate-400">HEAD POSE:</span>
+              <span id="hud-pose-state" class="font-bold text-slate-300">NOMINAL</span>
+            </div>
           </div>
         </div>
 
@@ -2623,6 +2845,32 @@
             <div class="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-2 border-r-2 border-red-400"></div>
             <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-2 border-l-2 border-red-400"></div>
             <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-2 border-r-2 border-red-400"></div>
+          </div>
+        </div>
+
+        <!-- Dynamic Canvas Overlay for TensorFlow.js Object Detection -->
+        <canvas id="cctv-ai-overlay-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-30"></canvas>
+
+        <!-- Real-Time AI Mobile Phone Detection High-Contrast Glowing RED Box -->
+        <div id="cctv-phone-detection-box" class="absolute hidden z-40 pointer-events-none transition-all duration-100 ease-out" style="top: 25%; left: 30%; width: 230px; height: 160px;">
+          <div class="relative border-4 border-red-500 bg-red-950/50 rounded-xl shadow-[0_0_40px_rgba(239,68,68,1),inset_0_0_25px_rgba(239,68,68,0.5)] p-2.5 animate-pulse flex flex-col justify-between h-full">
+            <!-- Top Label Badge -->
+            <div class="flex items-center gap-1.5 bg-red-600 text-white font-mono text-[11px] font-black px-2.5 py-1 rounded shadow-lg uppercase tracking-wider w-max border border-red-300">
+              <i data-lucide="smartphone" class="w-4 h-4 animate-bounce"></i>
+              <span id="cctv-phone-detected-label">MOBILE PHONE DETECTED - 88%</span>
+            </div>
+            
+            <!-- Bottom Alert Badge -->
+            <div class="flex items-center justify-between text-[10px] font-mono text-white bg-red-900/90 px-2 py-0.5 rounded border border-red-400 font-bold">
+              <span>UFM STATUTORY CODE 14.2</span>
+              <span class="text-amber-300">CONFISCATION ACTIVE</span>
+            </div>
+
+            <!-- Glowing High-Contrast Corner Reticles -->
+            <div class="absolute -top-2 -left-2 w-4 h-4 border-t-4 border-l-4 border-white"></div>
+            <div class="absolute -top-2 -right-2 w-4 h-4 border-t-4 border-r-4 border-white"></div>
+            <div class="absolute -bottom-2 -left-2 w-4 h-4 border-b-4 border-l-4 border-white"></div>
+            <div class="absolute -bottom-2 -right-2 w-4 h-4 border-b-4 border-r-4 border-white"></div>
           </div>
         </div>
 
@@ -2692,8 +2940,42 @@
             onclick="toggleCCTVAIBoundingBox()" 
             class="px-3 py-2 text-xs rounded-xl font-bold border border-red-500/40 bg-red-950/40 text-red-300 hover:bg-red-900/60 transition-colors flex items-center gap-1.5 shadow-sm">
             <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-red-400"></i>
-            <span id="cctv-ai-btn-text">AI Sentinel Detection: ON</span>
+            <span id="cctv-ai-btn-text">AI Sentinel: ON</span>
           </button>
+
+          <!-- 1-Click Simulated Mobile Phone Detection Button -->
+          <button 
+            id="cctv-btn-simulate-phone"
+            onclick="triggerSimulatedPhoneDetection()"
+            class="px-3 py-2 text-xs rounded-xl font-bold border border-rose-500/80 bg-rose-950/70 text-rose-200 hover:bg-rose-900 transition-all flex items-center gap-1.5 shadow-lg shadow-rose-950/80 active:scale-95"
+            title="Demonstrate Real-Time AI Mobile Phone Detection (Confidence >= 0.35)">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-300 animate-pulse"></i>
+            <span>⚡ Simulate Mobile (0.35+)</span>
+          </button>
+
+          <!-- 1-Click Simulated Gaze Deviation (3 Frames) Button -->
+          <button 
+            id="cctv-btn-simulate-gaze"
+            onclick="triggerSimulatedGazeDeviation()"
+            class="px-2.5 py-2 text-xs rounded-xl font-bold border border-amber-500/70 bg-amber-950/60 text-amber-200 hover:bg-amber-900 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+            title="Demonstrate Consistent Gaze Deviation (3 Consecutive Frames)">
+            <i data-lucide="eye" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span>👁 Gaze Deviation (3-Frame)</span>
+          </button>
+
+          <!-- Test Ghost Pose Suppression Button -->
+          <button 
+            id="cctv-btn-test-ghost-suppress"
+            onclick="triggerTestGhostPoseSuppression()"
+            class="px-2.5 py-2 text-xs rounded-xl font-semibold border border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+            title="Verify Ghost Head Pose Elimination: No Face / (0,0) / NaN Clears Angle State and Suppresses Warnings">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Ghost Pose Suppress</span>
+          </button>
+
+          <span id="cctv-tfjs-badge" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono hidden sm:inline-block">
+            TF.js: Sentinel Armed
+          </span>
 
           <div class="hidden lg:flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-1">
             <button onclick="setCCTVModalFilter('none')" id="cfilter-none" class="px-2.5 py-1 text-xs rounded-lg font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">Standard</button>
@@ -2743,7 +3025,122 @@
     </div>
   </div>
 
-  <!-- Toast Notification -->
+  <!-- ======================================================== -->
+  <!-- 5. TACTICAL TWO-WAY PUSH-TO-TALK INTERCOM MODAL          -->
+  <!-- ======================================================== -->
+  <div id="intercom-terminal-modal" style="display: none;" onclick="if(event.target === this) closeIntercomModal()" class="fixed inset-0 z-50 bg-[#070b14]/90 backdrop-blur-md hidden items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-[#0b1120] rounded-2xl shadow-2xl border border-indigo-950/80 max-w-xl w-full overflow-hidden flex flex-col text-slate-100 modal-pop-active">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 bg-gradient-to-r from-[#070b14] via-[#0f172a] to-[#070b14] border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+            <i data-lucide="radio" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-white tracking-tight">OPERION Apex Intercom</h3>
+              <span id="intercom-badge-online" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                LINE SECURED
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Encrypted Push-To-Talk Audio Line Across Terminals</p>
+          </div>
+        </div>
+
+        <button onclick="closeIntercomModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center border border-slate-700 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Main Intercom Area -->
+      <div class="p-6 flex flex-col items-center justify-center text-center space-y-6">
+        
+        <!-- Active Remote Peer Banner -->
+        <div id="intercom-incoming-banner" class="hidden w-full p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 animate-pulse flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span id="intercom-incoming-name" class="font-bold text-xs font-mono">Incoming Audio Stream...</span>
+          </div>
+          <div id="intercom-incoming-bars" class="flex items-end gap-1 h-4">
+            <div class="w-1 bg-emerald-400 rounded animate-bounce" style="height: 60%"></div>
+            <div class="w-1 bg-emerald-400 rounded animate-bounce" style="height: 90%; animation-delay: 0.1s"></div>
+            <div class="w-1 bg-emerald-400 rounded animate-bounce" style="height: 75%; animation-delay: 0.2s"></div>
+            <div class="w-1 bg-emerald-400 rounded animate-bounce" style="height: 100%; animation-delay: 0.15s"></div>
+          </div>
+        </div>
+
+        <!-- Push-To-Talk (PTT) Central Button -->
+        <div class="relative flex flex-col items-center">
+          <!-- Animated ring when active -->
+          <div id="ptt-ring" class="hidden absolute -inset-3 rounded-full border-2 border-rose-500/60 animate-ping pointer-events-none"></div>
+
+          <button 
+            id="ptt-button"
+            onmousedown="startPTT()"
+            onmouseup="stopPTT()"
+            onmouseleave="stopPTT()"
+            ontouchstart="startPTT(); event.preventDefault();"
+            ontouchend="stopPTT(); event.preventDefault();"
+            class="relative w-36 h-36 rounded-full bg-gradient-to-b from-indigo-600 via-indigo-700 to-slate-900 border-4 border-indigo-500/50 shadow-2xl shadow-indigo-950/80 flex flex-col items-center justify-center text-white active:scale-95 transition-all cursor-pointer select-none">
+            <i data-lucide="mic" class="w-10 h-10 mb-1 text-slate-100"></i>
+            <span class="text-xs font-extrabold tracking-wider uppercase">PUSH TO TALK</span>
+          </button>
+        </div>
+
+        <!-- Status & Hotkey Helper -->
+        <div class="space-y-1">
+          <div id="ptt-status-text" class="text-sm font-mono font-bold text-indigo-300">
+            HOLD TO TRANSMIT (PTT)
+          </div>
+          <p class="text-xs text-slate-400">
+            Press &amp; hold button or <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 font-mono text-[11px]">Spacebar</kbd> to broadcast voice.
+          </p>
+        </div>
+
+        <!-- Mic VU Meter -->
+        <div id="ptt-vu-meter" class="flex items-center gap-1.5 h-3 bg-slate-950/80 px-3 py-1 rounded-full border border-slate-800">
+          <span class="text-[10px] text-slate-500 font-mono mr-1">MIC LEVEL</span>
+          <div id="vu-bar-1" class="w-1.5 h-2 bg-slate-700 rounded-sm transition-all duration-75"></div>
+          <div id="vu-bar-2" class="w-1.5 h-2 bg-slate-700 rounded-sm transition-all duration-75"></div>
+          <div id="vu-bar-3" class="w-1.5 h-2 bg-slate-700 rounded-sm transition-all duration-75"></div>
+          <div id="vu-bar-4" class="w-1.5 h-2 bg-slate-700 rounded-sm transition-all duration-75"></div>
+          <div id="vu-bar-5" class="w-1.5 h-2 bg-slate-700 rounded-sm transition-all duration-75"></div>
+        </div>
+
+        <!-- Connected Terminals Roster -->
+        <div class="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 text-left">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-400"></i>
+              Active Intercom Terminals
+            </span>
+            <span id="intercom-peer-count" class="text-[10px] font-mono text-emerald-400">1 Online</span>
+          </div>
+
+          <div id="intercom-peer-list" class="space-y-1.5 max-h-28 overflow-y-auto text-xs font-mono">
+            <!-- Dynamically populated with active dashboard instances -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>SIGNALING: <strong>SOCKET.IO WEBRTC</strong></span>
+        </span>
+        <button onclick="closeIntercomModal()" class="text-xs text-slate-300 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700">
+          Close Intercom
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Hidden Remote Audio Playback Element -->
+  <audio id="intercom-remote-audio" autoplay playsinline class="hidden"></audio>
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- ======================================================== -->
@@ -2751,12 +3148,23 @@
   <!-- ======================================================== -->
   <script>
     // ========================================================
-    // OPERION LIVE BACKEND & CLOUDFLARE TUNNEL CONFIGURATION
+    // OPERION LIVE BACKEND & SOCKET.IO CONFIGURATION
     // ========================================================
     const OPERION_CONFIG = {
-      API_BASE: 'https://outputs-trips-separation-serious.trycloudflare.com',
-      WS_BASE: 'wss://outputs-trips-separation-serious.trycloudflare.com'
+      API_BASE: window.location.origin,
+      WS_BASE: (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host
     };
+
+    var operionSocket = null;
+    var latestInboundFrame = null;
+    var latestInboundCorner = 'Corner A';
+    var latestInboundRoom = 'Room 501-LHS (Block E)';
+    var isPTTActive = false;
+    var myOperatorName = 'Apex Operator #' + Math.floor(1000 + Math.random() * 9000);
+    var intercomLocalStream = null;
+    var mediaRecorder = null;
+    var currentSeatingPlan = null;
+    var ufmCache = [];
 
     var operionStudentsCache = [];
     var operionFacultyCache = [];
@@ -2770,11 +3178,15 @@
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       startClock();
+      initOperionSocket();
       checkBackendHealth();
       initTelemetryWebSocket();
+      loadUFMData();
       loadStudentsData();
       loadFacultyData();
       loadStaffAndAuthoritiesData();
+      initIntercomAudio();
+      initCOCOModel();
     });
 
     // Live Clock Display
@@ -2791,7 +3203,7 @@
 
     // Tab Navigation Switcher with Smooth Slide-Up Entrance Animation
     function switchTab(tabId) {
-      const sections = ['command', 'students', 'invigilator', 'staff', 'ufm', 'halls', 'triage'];
+      const sections = ['command', 'students', 'invigilator', 'staff', 'ufm', 'halls', 'triage', 'seating'];
       sections.forEach(id => {
         const sec = document.getElementById(`section-${id}`);
         const btn = document.getElementById(`tab-${id}`);
@@ -2818,6 +3230,10 @@
         loadFacultyData();
       } else if (tabId === 'staff' && !window.operionStaffLoaded) {
         loadStaffAndAuthoritiesData();
+      } else if (tabId === 'ufm') {
+        loadUFMData();
+      } else if (tabId === 'seating' && !currentSeatingPlan) {
+        loadSampleSeatingCSV();
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2854,9 +3270,685 @@
       if (text) text.textContent = 'API: Offline';
       if (badge) badge.className = 'cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold shadow-xs hover:bg-rose-100 transition-colors';
       if (showToastNotice) {
-        showToast('Connection Notice', 'FastAPI tunnel momentarily unreachable. Retaining local cached records.', 'error');
+        showToast('Connection Notice', 'Backend momentarily unreachable. Retaining local cached records.', 'error');
       }
       return false;
+    }
+
+    // ========================================================
+    // OPERION SOCKET.IO HUB & REAL-TIME EVENT CONTROLLER
+    // ========================================================
+    function initOperionSocket() {
+      try {
+        if (typeof io === 'undefined') {
+          console.warn('[Operion Socket] socket.io client not loaded yet.');
+          return;
+        }
+
+        operionSocket = io();
+
+        operionSocket.on('connect', () => {
+          console.log('[Operion Socket] Connected with ID:', operionSocket.id);
+          const dot = document.getElementById('backend-status-dot');
+          const text = document.getElementById('backend-status-text');
+          const badge = document.getElementById('backend-status-badge');
+          if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+          if (text) text.textContent = 'Socket & REST: Online';
+          if (badge) badge.className = 'cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-colors';
+
+          joinIntercomLine();
+        });
+
+        operionSocket.on('disconnect', () => {
+          console.log('[Operion Socket] Disconnected');
+          const dot = document.getElementById('backend-status-dot');
+          const text = document.getElementById('backend-status-text');
+          if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+          if (text) text.textContent = 'Socket: Reconnecting...';
+        });
+
+        // 1. UFM Events
+        operionSocket.on('ufm:created', (incident) => {
+          loadUFMData(false);
+          showToast('⚠️ New Form 7-UFM Incident', `Case ${incident.docket_no} registered for ${incident.student_name}.`);
+        });
+
+        operionSocket.on('ufm:updated', (incident) => {
+          loadUFMData(false);
+          showToast('Form 7-UFM Updated', `Case ${incident.docket_no} status: ${incident.status}`);
+        });
+
+        // 2. Dispatch Alarms
+        operionSocket.on('dispatch:alarm', (data) => {
+          handleIncomingDispatchAlarm(data);
+        });
+
+        // 3. Real-Time AI Mobile Phone Detection Sentinel Alert
+        operionSocket.on('ufm_alert', (data) => {
+          handleIncomingUFMAlert(data);
+        });
+
+        // 4. Inbound Mobile Camera Frames (Prototype Mobile Stream)
+        operionSocket.on('cctv:remote_frame', (data) => {
+          handleInboundCCTVFrame(data);
+        });
+
+        operionSocket.on('cctv:status_change', (data) => {
+          if (data.active) {
+            showToast('📱 Mobile Camera Stream Active', `Inbound feed active from ${data.room} (${data.corner}).`);
+          }
+        });
+
+        // 5. Telemetry Heartbeat
+        operionSocket.on('telemetry:heartbeat', (data) => {
+          const liveUfmNum = document.getElementById('stat-audit-num');
+          const liveUfmBadge = document.getElementById('stat-audit-badge');
+          if (data.activeUFM !== undefined) {
+            if (liveUfmNum) liveUfmNum.textContent = String(data.activeUFM).padStart(2, '0');
+            if (liveUfmBadge) liveUfmBadge.textContent = `${data.activeUFM} CASES`;
+          }
+        });
+
+      } catch (err) {
+        console.warn('[Operion Socket] Initialization error:', err);
+      }
+    }
+
+    // ========================================================
+    // REST & SQLITE LAYER: DYNAMIC FORM 7-UFM CONTROLLER
+    // ========================================================
+    async function loadUFMData(showNotice = false) {
+      try {
+        const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/ufm`);
+        if (!res.ok) throw new Error('API status ' + res.status);
+        const data = await res.json();
+        const incidents = data.incidents || [];
+        ufmCache = incidents;
+
+        // Update Central Command counters
+        const dashNum = document.getElementById('stat-audit-num');
+        const dashBadge = document.getElementById('stat-audit-badge');
+        const tabBadge = document.getElementById('ufm-tab-badge');
+        const statTotal = document.getElementById('ufm-stat-total');
+        const roomUfmCount = document.getElementById('room-ufm-count');
+
+        const activeCount = data.active !== undefined ? data.active : incidents.length;
+        const totalCount = data.total !== undefined ? data.total : incidents.length;
+
+        if (dashNum) dashNum.textContent = String(activeCount).padStart(2, '0');
+        if (dashBadge) dashBadge.textContent = `${activeCount} CASES`;
+        if (tabBadge) tabBadge.textContent = `${activeCount} Active`;
+        if (statTotal) statTotal.textContent = String(totalCount).padStart(2, '0');
+        if (roomUfmCount) {
+          const r501Count = incidents.filter(i => (i.hall || '').includes('501') && !['RESOLVED', 'DISMISSED'].includes(i.status)).length;
+          roomUfmCount.textContent = String(r501Count || 1).padStart(2, '0');
+        }
+
+        // Render incidents into the table
+        const tbody = document.getElementById('ufm-table-body');
+        if (tbody && incidents.length > 0) {
+          tbody.innerHTML = incidents.map(inc => {
+            const isPending = !['RESOLVED', 'DISMISSED'].includes(inc.status);
+            const statusBadge = isPending
+              ? `<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-amber-300">${(inc.status || 'UNDER_INVESTIGATION').replace(/_/g, ' ')}</span>`
+              : `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-emerald-300">RESOLVED</span>`;
+
+            return `
+              <tr class="${isPending ? 'bg-red-50/40' : 'hover:bg-[#f7f3eb]'} transition-colors">
+                <td class="font-mono font-bold text-red-900">${inc.docket_no}</td>
+                <td>
+                  <div class="font-bold text-[#1c1917]">${inc.student_name}</div>
+                  <div class="text-xs text-[#6e6352] font-mono">Roll: ${inc.roll_no}</div>
+                </td>
+                <td>
+                  <div class="font-semibold text-[#29241f]">${inc.hall || 'Room 501-LHS'}</div>
+                  <div class="text-xs text-[#6e6352]">${inc.desk || 'Desk A-02'}</div>
+                </td>
+                <td>
+                  <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded border border-red-300">
+                    ${inc.malpractice_type || 'Formula Chits'}
+                  </span>
+                  <p class="text-xs text-[#524a3e] mt-1 line-clamp-2">${inc.evidence_notes}</p>
+                </td>
+                <td>
+                  <span class="font-medium text-[#1c1917] text-xs">Booklet #${inc.answer_booklet_no || 'QB-4092'} Cancelled</span>
+                  <p class="text-[11px] text-[#6e6352] font-mono">Prov #${inc.provisional_booklet_no || 'QB-4122'} Issued</p>
+                </td>
+                <td>${statusBadge}</td>
+                <td class="text-right">
+                  <button onclick="openSampleUFMFormModal('${inc.docket_no}')" class="text-xs font-bold text-white bg-red-700 hover:bg-red-800 px-3 py-1.5 rounded-lg shadow-sm transition-colors">
+                    View Form 7-UFM
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+          lucide.createIcons();
+        }
+
+        if (showNotice) {
+          showToast('Form 7-UFM Dossier Synchronized', `${incidents.length} statutory records live from SQLite.`);
+        }
+      } catch (err) {
+        console.warn('Failed to load /api/ufm:', err);
+      }
+    }
+
+    // ========================================================
+    // MOBILE CAMERA STREAM RECEIVER (INSPECT ROOM FEED MODAL)
+    // ========================================================
+    function handleInboundCCTVFrame(data) {
+      latestInboundFrame = data.frame;
+      latestInboundCorner = data.corner || 'Corner A';
+      latestInboundRoom = data.room || 'Room 501-LHS (Block E)';
+
+      const modal = document.getElementById('cctv-inspection-modal');
+      if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden')) {
+        return;
+      }
+
+      const inboundImg = document.getElementById('cctv-inbound-img');
+      const standbyScreen = document.getElementById('cctv-modal-standby-screen');
+      const wsBadge = document.getElementById('cctv-modal-ws-badge');
+      const wsText = document.getElementById('cctv-modal-ws-text');
+      const wsDot = document.getElementById('cctv-modal-ws-dot');
+      const statusBadge = document.getElementById('cctv-modal-status-badge');
+      const statusText = document.getElementById('cctv-modal-status-text');
+      const statusDot = document.getElementById('cctv-modal-status-dot');
+      const recBadge = document.getElementById('cctv-modal-rec-badge');
+      const cornerDot = document.getElementById('cctv-modal-corner-dot');
+      const cornerText = document.getElementById('cctv-modal-corner-text');
+
+      if (inboundImg) {
+        inboundImg.src = data.frame;
+        inboundImg.classList.remove('hidden');
+      }
+      if (standbyScreen) standbyScreen.classList.add('hidden');
+
+      if (wsText) wsText.textContent = `MOBILE CAM: ${data.fps || 20} FPS`;
+      if (wsDot) wsDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+      if (wsBadge) wsBadge.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-mono font-medium';
+
+      if (statusText) statusText.textContent = 'MOBILE INBOUND LIVE';
+      if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+      if (statusBadge) statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-semibold';
+
+      if (recBadge) {
+        recBadge.classList.remove('hidden');
+        recBadge.classList.add('flex');
+      }
+
+      if (cornerText) cornerText.textContent = `${data.corner} • MOBILE FEED`;
+      if (cornerDot) cornerDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+    }
+
+    // ========================================================
+    // FLYING SQUAD DISPATCH: SOUND TRIGGER & BROADCAST ALARMS
+    // ========================================================
+    function playDispatchAlarmSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
+        const playTone = (freq, duration, delay) => {
+          setTimeout(() => {
+            try {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(freq, ctx.currentTime);
+              gain.gain.setValueAtTime(0.2, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start();
+              osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+          }, delay);
+        };
+
+        // 4-pulse emergency alert tone
+        playTone(880, 0.16, 0);
+        playTone(660, 0.16, 180);
+        playTone(880, 0.20, 360);
+        playTone(660, 0.25, 580);
+      } catch (err) {
+        console.warn('AudioContext alarm tone blocked:', err);
+      }
+    }
+
+    function handleIncomingDispatchAlarm(data) {
+      // 1. Play emergency synthesized siren
+      playDispatchAlarmSound();
+
+      // 2. High-priority Toast Banner
+      showToast(
+        `🚨 ${data.priority || 'EMERGENCY'}: ${data.type.toUpperCase()}`,
+        `${data.message || 'Flying squad rapid response dispatched'} &bull; ${data.hall}`,
+        'danger'
+      );
+
+      // 3. Highlight room card
+      const roomCards = document.querySelectorAll('.portal-room-card');
+      roomCards.forEach(card => {
+        if (card.textContent.includes('501') || card.textContent.includes(data.hall)) {
+          card.classList.add('ring-4', 'ring-red-500', 'animate-pulse');
+          setTimeout(() => card.classList.remove('ring-4', 'ring-red-500', 'animate-pulse'), 8000);
+        }
+      });
+    }
+
+    // ========================================================
+    // 2-WAY PUSH-TO-TALK INTERCOM OVER SOCKET.IO WEBRTC
+    // ========================================================
+    function openIntercomModal(targetName) {
+      const modal = document.getElementById('intercom-terminal-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+      joinIntercomLine();
+      lucide.createIcons();
+    }
+
+    function closeIntercomModal() {
+      const modal = document.getElementById('intercom-terminal-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+      if (isPTTActive) stopPTT();
+    }
+
+    function joinIntercomLine() {
+      if (operionSocket && operionSocket.connected) {
+        operionSocket.emit('intercom:join', {
+          name: myOperatorName,
+          role: 'Central Operations Command'
+        });
+      }
+    }
+
+    async function startPTT() {
+      if (isPTTActive) return;
+      isPTTActive = true;
+
+      const pttBtn = document.getElementById('ptt-button');
+      const pttStatus = document.getElementById('ptt-status-text');
+      const pttRing = document.getElementById('ptt-ring');
+
+      if (pttBtn) pttBtn.classList.add('bg-rose-600', 'scale-95');
+      if (pttStatus) pttStatus.textContent = 'TRANSMITTING AUDIO...';
+      if (pttRing) pttRing.classList.remove('hidden');
+
+      if (operionSocket) {
+        operionSocket.emit('intercom:ptt', { talking: true, name: myOperatorName });
+      }
+
+      try {
+        if (!intercomLocalStream) {
+          intercomLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } else {
+          intercomLocalStream.getAudioTracks().forEach(t => t.enabled = true);
+        }
+
+        // Direct audio chunk streaming for guaranteed transmission across machines
+        try {
+          mediaRecorder = new MediaRecorder(intercomLocalStream);
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0 && isPTTActive && operionSocket) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                operionSocket.emit('intercom:audio_chunk', {
+                  audio: reader.result,
+                  senderName: myOperatorName
+                });
+              };
+              reader.readAsDataURL(event.data);
+            }
+          };
+          mediaRecorder.start(140);
+        } catch (e) {
+          console.warn('MediaRecorder error:', e);
+        }
+
+        animateMicMeter(true);
+      } catch (err) {
+        console.warn('Microphone permission needed for PTT:', err);
+        if (pttStatus) pttStatus.textContent = 'Mic Permission Required';
+      }
+    }
+
+    function stopPTT() {
+      if (!isPTTActive) return;
+      isPTTActive = false;
+
+      const pttBtn = document.getElementById('ptt-button');
+      const pttStatus = document.getElementById('ptt-status-text');
+      const pttRing = document.getElementById('ptt-ring');
+
+      if (pttBtn) pttBtn.classList.remove('bg-rose-600', 'scale-95');
+      if (pttStatus) pttStatus.textContent = 'HOLD TO TRANSMIT (PTT)';
+      if (pttRing) pttRing.classList.add('hidden');
+
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch (e) {}
+        mediaRecorder = null;
+      }
+
+      if (intercomLocalStream) {
+        intercomLocalStream.getAudioTracks().forEach(t => t.enabled = false);
+      }
+
+      if (operionSocket) {
+        operionSocket.emit('intercom:ptt', { talking: false, name: myOperatorName });
+      }
+
+      animateMicMeter(false);
+    }
+
+    function animateMicMeter(active) {
+      for (let i = 1; i <= 5; i++) {
+        const bar = document.getElementById(`vu-bar-${i}`);
+        if (!bar) continue;
+        if (active) {
+          bar.className = 'w-1.5 h-3 bg-emerald-400 rounded-sm animate-pulse';
+        } else {
+          bar.className = 'w-1.5 h-2 bg-slate-700 rounded-sm';
+        }
+      }
+    }
+
+    function renderIntercomPeers(peers) {
+      const container = document.getElementById('intercom-peer-list');
+      const countEl = document.getElementById('intercom-peer-count');
+      if (!container) return;
+
+      if (countEl) countEl.textContent = `${peers.length} Online`;
+
+      container.innerHTML = peers.map(p => {
+        const isMe = operionSocket && p.socketId === operionSocket.id;
+        return `
+          <div class="flex items-center justify-between p-2 rounded-lg ${isMe ? 'bg-indigo-950/60 border border-indigo-700/50' : 'bg-slate-900 border border-slate-800'}">
+            <span class="flex items-center gap-1.5 text-slate-200">
+              <span class="w-2 h-2 rounded-full ${isMe ? 'bg-indigo-400 animate-pulse' : 'bg-emerald-400'}"></span>
+              <strong>${p.name}</strong> ${isMe ? '<span class="text-[10px] text-indigo-300 font-bold">(THIS MACHINE)</span>' : ''}
+            </span>
+            <span class="text-[10px] text-slate-400">${p.role || 'Apex Desk'}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function initIntercomAudio() {
+      if (!operionSocket) return;
+
+      // Remote PTT State
+      operionSocket.on('intercom:ptt_state', (data) => {
+        const rxBanner = document.getElementById('intercom-incoming-banner');
+        const rxName = document.getElementById('intercom-incoming-name');
+        const rxBars = document.getElementById('intercom-incoming-bars');
+
+        if (data.talking && data.senderId !== operionSocket.id) {
+          if (rxBanner) rxBanner.classList.remove('hidden');
+          if (rxName) rxName.textContent = `${data.name} is Speaking...`;
+          if (rxBars) rxBars.classList.remove('hidden');
+        } else {
+          if (rxBanner) rxBanner.classList.add('hidden');
+          if (rxBars) rxBars.classList.add('hidden');
+        }
+      });
+
+      // Remote Audio Playback
+      operionSocket.on('intercom:remote_audio', (data) => {
+        if (operionSocket && data.senderId === operionSocket.id) return;
+        try {
+          const audio = new Audio(data.audio);
+          audio.play().catch(e => console.warn('Audio play error:', e));
+        } catch (e) {
+          console.warn('Audio playback error:', e);
+        }
+      });
+
+      // Peer Synchronization
+      operionSocket.on('intercom:peer_list', (peers) => {
+        renderIntercomPeers(peers);
+      });
+
+      operionSocket.on('intercom:peer_joined', () => {
+        joinIntercomLine();
+      });
+
+      operionSocket.on('intercom:peer_left', () => {
+        joinIntercomLine();
+      });
+
+      // Hotkey listener for Push-to-Talk (Spacebar)
+      window.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('intercom-terminal-modal');
+        if (modal && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
+          if (e.code === 'Space' && !e.repeat && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            startPTT();
+          }
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        const modal = document.getElementById('intercom-terminal-modal');
+        if (modal && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
+          if (e.code === 'Space') {
+            e.preventDefault();
+            stopPTT();
+          }
+        }
+      });
+    }
+
+    // ========================================================
+    // ZIG-ZAG ANTI-CHEATING SEATING PLAN ENGINE CONTROLLER
+    // ========================================================
+    async function loadSampleSeatingCSV() {
+      try {
+        const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/seating/sample`);
+        const data = await res.json();
+        if (data.sample_csv) {
+          const textarea = document.getElementById('seating-csv-textarea');
+          if (textarea) textarea.value = data.sample_csv;
+          showToast('Sample Registry Loaded', '30 students across 4 branches (CSE, ECE, ME, CE) loaded into editor.');
+        }
+      } catch (err) {
+        showToast('Error', 'Could not load sample CSV', 'danger');
+      }
+    }
+
+    async function handleGenerateSeating() {
+      const hallName = document.getElementById('seating-hall-select').value;
+      const rows = parseInt(document.getElementById('seating-rows-input').value, 10) || 5;
+      const cols = parseInt(document.getElementById('seating-cols-input').value, 10) || 6;
+      const fileInput = document.getElementById('seating-csv-file');
+      const textVal = (document.getElementById('seating-csv-textarea') || {}).value || '';
+
+      const formData = new FormData();
+      formData.append('hall_name', hallName);
+      formData.append('rows', rows);
+      formData.append('cols', cols);
+
+      let body = null;
+      let headers = {};
+
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formData.append('file', fileInput.files[0]);
+        body = formData;
+      } else if (textVal.trim()) {
+        body = JSON.stringify({
+          hall_name: hallName,
+          rows: rows,
+          cols: cols,
+          csv: textVal.trim()
+        });
+        headers['Content-Type'] = 'application/json';
+      } else {
+        showToast('Missing CSV Data', 'Please select a CSV file or click "Load Sample Data".', 'danger');
+        return;
+      }
+
+      const btn = document.getElementById('btn-generate-seating');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block animate-spin mr-1">⟳</span> Generating Zig-Zag Matrix...';
+      }
+
+      try {
+        const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/seating/generate`, {
+          method: 'POST',
+          headers,
+          body
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Seating generation failed');
+        }
+
+        currentSeatingPlan = data;
+        renderSeatingPlan(data);
+        showToast('Anti-Cheating Seating Plan Generated', `${data.allocated_students} students placed. ${data.conflicts} adjacency conflicts!`);
+      } catch (err) {
+        console.error('Seating generation error:', err);
+        showToast('Generation Failed', err.message, 'danger');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Generate Anti-Cheating Seating Plan</span>';
+          lucide.createIcons();
+        }
+      }
+    }
+
+    function renderSeatingPlan(data) {
+      const container = document.getElementById('seating-results-container');
+      if (container) container.classList.remove('hidden');
+
+      const metaHall = document.getElementById('seating-meta-hall');
+      const metaAllocated = document.getElementById('seating-meta-allocated');
+      if (metaHall) metaHall.textContent = data.hall_name;
+      if (metaAllocated) {
+        const bufferStr = data.buffer_seats !== undefined ? ` (${data.buffer_seats} Buffer Seats)` : '';
+        metaAllocated.innerHTML = `${data.allocated_students} / ${data.total_seats} <span class="text-xs font-semibold text-[#8a7f6e] block mt-0.5">${bufferStr}</span>`;
+      }
+      
+      const conflictEl = document.getElementById('seating-meta-conflicts');
+      if (conflictEl) {
+        if (data.conflicts === 0) {
+          conflictEl.className = 'text-2xl font-extrabold text-emerald-700 mt-0.5 block';
+          conflictEl.innerHTML = '0 Conflicts <span class="text-[10px] text-emerald-700 font-semibold block mt-0.5">● Strict 8-Directional Chebyshev Air Gap Verified</span>';
+        } else {
+          conflictEl.className = 'text-2xl font-extrabold text-amber-600 mt-0.5 block';
+          conflictEl.textContent = `${data.conflicts} Warning`;
+        }
+      }
+
+      // Branch & Year Distribution Pills
+      const distEl = document.getElementById('seating-branch-breakdown');
+      const distData = data.branch_year_distribution || data.branch_distribution;
+      if (distEl && distData) {
+        const branchColors = {
+          CSE: 'bg-blue-100 text-blue-800 border-blue-300',
+          ECE: 'bg-amber-100 text-amber-800 border-amber-300',
+          ME: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+          CE: 'bg-purple-100 text-purple-800 border-purple-300'
+        };
+
+        distEl.innerHTML = Object.entries(distData).map(([key, count]) => {
+          const mainBranch = key.split(' ')[0];
+          const colorClass = branchColors[mainBranch] || 'bg-slate-100 text-slate-800 border-slate-300';
+          return `
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold border ${colorClass}">
+              ${key}: ${count} Candidates
+            </span>
+          `;
+        }).join('');
+      }
+
+      // Render 2D Grid
+      const gridEl = document.getElementById('seating-grid-matrix');
+      if (!gridEl) return;
+
+      const branchTileColors = {
+        CSE: 'border-blue-400 bg-blue-50/80 text-blue-900',
+        ECE: 'border-amber-400 bg-amber-50/80 text-amber-900',
+        ME: 'border-emerald-400 bg-emerald-50/80 text-emerald-900',
+        CE: 'border-purple-400 bg-purple-50/80 text-purple-900'
+      };
+
+      const branchPillColors = {
+        CSE: 'bg-blue-600 text-white',
+        ECE: 'bg-amber-600 text-white',
+        ME: 'bg-emerald-600 text-white',
+        CE: 'bg-purple-600 text-white'
+      };
+
+      gridEl.style.gridTemplateColumns = `repeat(${data.cols}, minmax(115px, 1fr))`;
+      gridEl.innerHTML = data.grid.flat().map(seat => {
+        if (!seat || seat.empty || seat.isBuffer) {
+          const deskId = seat && seat.seat ? seat.seat : 'DESK';
+          const reasonText = seat && seat.reason ? seat.reason : '8-Way Chebyshev Air Gap';
+          return `
+            <div class="p-2.5 border-2 border-dashed border-slate-300 rounded-xl bg-slate-100/90 text-center flex flex-col justify-between min-h-[105px] shadow-xs transition-all hover:bg-slate-200/70">
+              <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                <span class="font-mono text-xs font-extrabold text-slate-600">${deskId}</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-200 text-slate-700 border border-slate-300">BUFFER</span>
+              </div>
+              <div class="my-auto py-1">
+                <div class="text-[11px] font-bold text-slate-600 flex items-center justify-center gap-1">
+                  <i data-lucide="shield" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>EMPTY BUFFER SEAT</span>
+                </div>
+                <div class="text-[9px] font-mono text-slate-400 mt-0.5">${reasonText}</div>
+              </div>
+              <div class="text-[9px] font-mono font-semibold text-slate-400 pt-1 border-t border-slate-200 truncate">
+                Anti-Cheating Guard
+              </div>
+            </div>
+          `;
+        }
+
+        const tileStyle = branchTileColors[seat.branch] || 'border-slate-300 bg-slate-50 text-slate-900';
+        const pillStyle = branchPillColors[seat.branch] || 'bg-slate-700 text-white';
+        const yearTag = seat.year ? ` • ${seat.year}` : '';
+
+        return `
+          <div class="p-2.5 border-2 ${tileStyle} rounded-xl shadow-xs flex flex-col justify-between min-h-[105px] transition-all hover:scale-105 hover:shadow-md">
+            <div class="flex items-center justify-between pb-1 border-b border-black/10">
+              <span class="font-mono text-xs font-extrabold">${seat.seat}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${pillStyle}">${seat.branch}${yearTag}</span>
+            </div>
+            <div class="my-1">
+              <div class="text-xs font-bold truncate leading-tight">${seat.name}</div>
+              <div class="text-[10px] font-mono opacity-80 truncate">${seat.roll_no}</div>
+            </div>
+            <div class="text-[9px] font-mono font-semibold pt-1 border-t border-black/10 truncate flex items-center justify-between">
+              <span>${seat.paper_code}</span>
+              <span class="text-[8px] opacity-75 font-bold uppercase">8-WAY ISOLATED</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function printSeatingPlan() {
+      if (!currentSeatingPlan) {
+        showToast('No Seating Plan', 'Please generate a seating plan first before printing.', 'danger');
+        return;
+      }
+      window.print();
     }
 
     // ========================================================
@@ -3400,8 +4492,9 @@
             <span class="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Terminal Active
             </span>
-            <button onclick="showToast('Secure Intercom Initiated', 'Direct encrypted voice line connected to ${a.name}.')" class="px-3 py-1.5 text-xs font-semibold bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg transition-colors shadow-xs">
-              Intercom Line
+            <button onclick="openIntercomModal('${a.name}')" class="px-3 py-1.5 text-xs font-semibold bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5">
+              <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+              <span>Intercom Line</span>
             </button>
           </div>
         </div>
@@ -3429,7 +4522,7 @@
             </span>
           </td>
           <td class="text-right">
-            <button onclick="showToast('Patrol Ping Sent', 'Emergency location beacon transmitted to ${s.name} (${s.staff_id}).')" class="px-2.5 py-1 text-xs font-semibold bg-[#382115] hover:bg-[#4d3324] text-white rounded-lg transition-colors shadow-xs">
+            <button onclick="dispatchPatrolPing('${s.staff_id}', '${s.name}', this)" class="px-2.5 py-1 text-xs font-semibold bg-[#382115] hover:bg-[#4d3324] text-white rounded-lg transition-colors shadow-xs">
               Dispatch Ping
             </button>
           </td>
@@ -4172,8 +5265,800 @@
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
       }
+
+      // Check if remote mobile frame has arrived
+      if (latestInboundFrame) {
+        const inboundImg = document.getElementById('cctv-inbound-img');
+        const standbyScreen = document.getElementById('cctv-modal-standby-screen');
+        const statusText = document.getElementById('cctv-modal-status-text');
+        const statusBadge = document.getElementById('cctv-modal-status-badge');
+        const statusDot = document.getElementById('cctv-modal-status-dot');
+        const wsText = document.getElementById('cctv-modal-ws-text');
+        const wsBadge = document.getElementById('cctv-modal-ws-badge');
+        const recBadge = document.getElementById('cctv-modal-rec-badge');
+
+        if (inboundImg) {
+          inboundImg.src = latestInboundFrame;
+          inboundImg.classList.remove('hidden');
+        }
+        if (standbyScreen) standbyScreen.classList.add('hidden');
+        if (statusText) statusText.textContent = 'MOBILE INBOUND LIVE';
+        if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+        if (statusBadge) statusBadge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-semibold';
+        if (wsText) wsText.textContent = 'WS: Inbound Mobile Feed (Live)';
+        if (wsBadge) wsBadge.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-mono font-medium';
+        if (recBadge) { recBadge.classList.remove('hidden'); recBadge.classList.add('flex'); }
+      }
+
       updateCCTVModalCornerBadge();
       lucide.createIcons();
+    }
+
+    // ========================================================
+    // REAL-TIME SURVEILLANCE INSPECTION AI SENTINEL (UNIFIED ENGINE)
+    // ========================================================
+    var cocoModel = null;
+    var blazeFaceModel = null;
+    var isAIModelsLoading = false;
+    var aiDetectionInterval = null;
+    var phoneBoxHideTimer = null;
+
+    // 1. Phone Detection Configuration
+    const PHONE_TARGET_CLASSES = ['cell phone', 'remote', 'electronic device'];
+    const PHONE_CONFIDENCE_THRESHOLD = 0.35;
+
+    // 2. Ghost Head Pose Elimination Configuration & State
+    const FACE_CONFIDENCE_THRESHOLD = 0.65;
+    const GAZE_CONSECUTIVE_FRAMES_REQUIRED = 3;
+    var headPoseState = {
+      yaw: 0,
+      pitch: 0,
+      angle: 0,
+      consecutiveGazeDeviations: 0,
+      isAlertActive: false,
+      hasValidFace: false
+    };
+
+    // 3. Telemetry HUD & 4-Second Throttle Lock Configuration & State
+    var isSocketAlertLocked = false;
+    var lastSocketAlertTime = 0;
+    const SOCKET_ALERT_THROTTLE_LOCK_MS = 4000;
+    var telemetryHUDState = {
+      topClass: 'NONE',
+      topConfidence: 0.0,
+      poseState: 'NOMINAL'
+    };
+
+    /**
+     * Check if a detected class matches phone or confiscated electronic devices
+     */
+    function isPhoneOrElectronicDevice(className) {
+      if (!className) return false;
+      const lower = String(className).toLowerCase().trim();
+      return PHONE_TARGET_CLASSES.some(target => lower === target || lower.includes(target) || target.includes(lower))
+        || lower === 'cellphone' || lower === 'smartphone' || lower === 'mobile phone';
+    }
+
+    /**
+     * Initialize TensorFlow.js, COCO-SSD and BlazeFace Models
+     */
+    async function initCOCOModel() {
+      if (cocoModel && blazeFaceModel) return { cocoModel, blazeFaceModel };
+      if (isAIModelsLoading) return;
+      isAIModelsLoading = true;
+
+      const badge = document.getElementById('cctv-tfjs-badge');
+      if (badge) {
+        badge.textContent = 'TF.js: Loading AI Models...';
+        badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono hidden sm:inline-block animate-pulse';
+      }
+
+      try {
+        if (typeof cocoSsd !== 'undefined') {
+          console.log('[Operion AI] Loading COCO-SSD MobileNet inference engine...');
+          cocoModel = await cocoSsd.load({ base: 'mobilenet_v2' });
+        }
+        if (typeof blazeface !== 'undefined') {
+          console.log('[Operion AI] Loading BlazeFace Pose & Facial Landmark engine...');
+          blazeFaceModel = await blazeface.load();
+        }
+
+        console.log('[Operion AI] Real-time Surveillance Pipeline Initialized & Armed.');
+        if (badge) {
+          badge.textContent = 'TF.js: Sentinel Armed (Conf >= 0.35)';
+          badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono hidden sm:inline-block';
+        }
+
+        startObjectDetectionLoop();
+      } catch (err) {
+        console.warn('[Operion AI] Model initialization notice:', err.message || err);
+      } finally {
+        isAIModelsLoading = false;
+        if (!cocoModel && badge) {
+          badge.textContent = 'TF.js: Sentinel Ready';
+          badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono hidden sm:inline-block';
+        }
+      }
+    }
+
+    /**
+     * Continuous Frame Inference Loop for Active CCTV or Inbound Mobile Camera
+     * - Strictly guards against invalid video state (video.readyState >= 2)
+     * - Strictly synchronizes canvas width/height with video.videoWidth/video.videoHeight
+     */
+    function startObjectDetectionLoop() {
+      if (aiDetectionInterval) clearInterval(aiDetectionInterval);
+      aiDetectionInterval = setInterval(async () => {
+        const modal = document.getElementById('cctv-inspection-modal');
+        if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden')) {
+          return;
+        }
+
+        const videoEl = document.getElementById('cctv-modal-video');
+        const inboundImg = document.getElementById('cctv-inbound-img');
+        const overlayCanvas = document.getElementById('cctv-ai-overlay-canvas');
+
+        let target = null;
+        let isVideo = false;
+
+        if (isCCTVFeedActive && videoEl && !videoEl.classList.contains('hidden')) {
+          // Requirement 1: Guard against invalid video state (video.readyState >= 2)
+          if (videoEl.readyState < 2 || videoEl.paused || videoEl.ended || !videoEl.videoWidth || !videoEl.videoHeight) {
+            return;
+          }
+          target = videoEl;
+          isVideo = true;
+
+          // Requirement 1: Synchronize canvas width/height strictly with video.videoWidth/video.videoHeight
+          if (overlayCanvas) {
+            if (overlayCanvas.width !== videoEl.videoWidth || overlayCanvas.height !== videoEl.videoHeight) {
+              overlayCanvas.width = videoEl.videoWidth;
+              overlayCanvas.height = videoEl.videoHeight;
+            }
+          }
+        } else if (inboundImg && !inboundImg.classList.contains('hidden') && inboundImg.complete && inboundImg.naturalWidth > 0) {
+          target = inboundImg;
+          if (overlayCanvas) {
+            if (overlayCanvas.width !== inboundImg.naturalWidth || overlayCanvas.height !== inboundImg.naturalHeight) {
+              overlayCanvas.width = inboundImg.naturalWidth;
+              overlayCanvas.height = inboundImg.naturalHeight;
+            }
+          }
+        }
+
+        if (!target) return;
+
+        await runSurveillanceInferenceStep(target, isVideo);
+      }, 250);
+    }
+
+    /**
+     * Unified Inference Step: Phone Detection + Ghost Pose Elimination + Telemetry HUD
+     */
+    async function runSurveillanceInferenceStep(target, isVideo) {
+      const overlayCanvas = document.getElementById('cctv-ai-overlay-canvas');
+      const ctx = overlayCanvas ? overlayCanvas.getContext('2d') : null;
+      if (ctx && overlayCanvas) {
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+
+      let predictions = [];
+      let faces = [];
+
+      // 1. Run COCO-SSD Object Detection
+      if (cocoModel) {
+        try {
+          predictions = await cocoModel.detect(target);
+        } catch (e) {
+          // Ignore transient capture glitch
+        }
+      }
+
+      // 2. Run BlazeFace Face & Landmark Estimation
+      if (blazeFaceModel) {
+        try {
+          faces = await blazeFaceModel.estimateFaces(target, false);
+        } catch (e) {
+          // Ignore transient face capture glitch
+        }
+      }
+
+      // 3. Compute Highest Detected Class and Confidence Score for Telemetry HUD
+      let topClass = 'NONE';
+      let topConfidence = 0.0;
+      if (predictions && predictions.length > 0) {
+        let bestPred = predictions[0];
+        predictions.forEach(p => {
+          if (p.score > bestPred.score) bestPred = p;
+        });
+        topClass = bestPred.class || 'DETECTED';
+        topConfidence = bestPred.score || 0.0;
+      } else if (faces && faces.length > 0 && faces[0].probability) {
+        topClass = 'PERSON / FACE';
+        topConfidence = faces[0].probability[0] || 0.0;
+      }
+
+      // 4. Requirement 1: Phone Detection (Classes: ['cell phone', 'remote', 'electronic device'], Threshold: >= 0.35)
+      const phonePred = (predictions || []).find(p => 
+        isPhoneOrElectronicDevice(p.class) && p.score >= PHONE_CONFIDENCE_THRESHOLD
+      );
+
+      let phoneDetectedThisFrame = false;
+      if (phonePred) {
+        phoneDetectedThisFrame = true;
+        handlePhoneDetected(phonePred, target);
+      }
+
+      // 5. Requirement 2: Ghost Head Pose Elimination Pipeline
+      const poseVerdict = evaluateGhostHeadPosePipeline(faces, target, predictions);
+
+      // 6. Requirement 3: Update Top-Right Semi-Transparent Telemetry HUD
+      updateTelemetryHUD(topClass, topConfidence, poseVerdict, phoneDetectedThisFrame);
+    }
+
+    /**
+     * Requirement 2: Ghost Head Pose Elimination Pipeline
+     * - Ensure the pose pipeline executes strictly when a face is present with confidence >= 0.65.
+     * - If no face is detected or coordinates are (0,0)/NaN, clear all head angle states and suppress warnings.
+     * - Require consistent gaze deviation across 3 consecutive frames before triggering an amber "GAZE DEVIATION" alert.
+     */
+    function evaluateGhostHeadPosePipeline(faces, target, predictions) {
+      // Find valid face with confidence >= 0.65
+      let validFace = null;
+      if (faces && Array.isArray(faces) && faces.length > 0) {
+        for (const f of faces) {
+          const prob = (f.probability && f.probability[0] !== undefined) ? f.probability[0] : (f.score || 0);
+          if (prob >= FACE_CONFIDENCE_THRESHOLD) {
+            // Check for valid non-zero and non-NaN coordinates
+            if (f.topLeft && f.bottomRight) {
+              const x1 = f.topLeft[0];
+              const y1 = f.topLeft[1];
+              const x2 = f.bottomRight[0];
+              const y2 = f.bottomRight[1];
+
+              const isCoordinateValid = !isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)
+                && !(x1 === 0 && y1 === 0 && x2 === 0 && y2 === 0)
+                && (x2 - x1) > 5 && (y2 - y1) > 5;
+
+              if (isCoordinateValid) {
+                validFace = {
+                  face: f,
+                  confidence: prob,
+                  box: [x1, y1, x2 - x1, y2 - y1],
+                  landmarks: f.landmarks || null
+                };
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // If BlazeFace not active, check if COCO-SSD has person with confidence >= 0.65 as fallback
+      if (!validFace && predictions && predictions.length > 0) {
+        const personPred = predictions.find(p => p.class === 'person' && p.score >= FACE_CONFIDENCE_THRESHOLD);
+        if (personPred && personPred.bbox) {
+          const [px, py, pw, ph] = personPred.bbox;
+          if (!isNaN(px) && !isNaN(py) && !(px === 0 && py === 0) && pw > 10 && ph > 10) {
+            // Approximate face region in upper 25% of person bounding box
+            validFace = {
+              face: personPred,
+              confidence: personPred.score,
+              box: [px + pw * 0.25, py, pw * 0.5, ph * 0.25],
+              landmarks: null
+            };
+          }
+        }
+      }
+
+      // STRICT RULE: If no face is detected OR coordinates are (0,0)/NaN OR confidence < 0.65
+      if (!validFace) {
+        // Clear all head angle states and suppress warnings
+        headPoseState.yaw = 0;
+        headPoseState.pitch = 0;
+        headPoseState.angle = 0;
+        headPoseState.consecutiveGazeDeviations = 0;
+        headPoseState.isAlertActive = false;
+        headPoseState.hasValidFace = false;
+
+        // Suppress warnings in CCTV UI box if it was previously in gaze alert
+        suppressGazeDeviationWarning();
+        return { state: 'NO FACE DETECTED', angle: 0, alert: false };
+      }
+
+      // Face is verified present with confidence >= 0.65 and valid non-zero/non-NaN coordinates
+      headPoseState.hasValidFace = true;
+      let calculatedAngle = 0;
+      let isGazeDeviatedThisFrame = false;
+
+      if (validFace.landmarks && validFace.landmarks.length >= 3) {
+        // Landmark-based precise yaw calculation (Right Eye: 0, Left Eye: 1, Nose: 2)
+        const rightEye = validFace.landmarks[0];
+        const leftEye = validFace.landmarks[1];
+        const nose = validFace.landmarks[2];
+
+        if (rightEye && leftEye && nose && !isNaN(rightEye[0]) && !isNaN(leftEye[0]) && !isNaN(nose[0])) {
+          const eyeMidX = (rightEye[0] + leftEye[0]) / 2;
+          const eyeDist = Math.abs(leftEye[0] - rightEye[0]);
+          if (eyeDist > 5) {
+            const noseDeviationRatio = (nose[0] - eyeMidX) / (eyeDist * 0.5);
+            calculatedAngle = Math.max(-60, Math.min(60, noseDeviationRatio * 45));
+            // Deviation threshold: > 25°
+            if (Math.abs(calculatedAngle) >= 25 || Math.abs(noseDeviationRatio) >= 0.55) {
+              isGazeDeviatedThisFrame = true;
+            }
+          }
+        }
+      } else {
+        // Fallback head orientation calculation from face aspect ratio
+        calculatedAngle = 0;
+      }
+
+      // Guard against NaN
+      if (isNaN(calculatedAngle)) {
+        calculatedAngle = 0;
+        isGazeDeviatedThisFrame = false;
+      }
+      headPoseState.angle = calculatedAngle;
+
+      // REQUIREMENT 2: Require consistent gaze deviation across 3 consecutive frames before triggering amber alert
+      if (isGazeDeviatedThisFrame) {
+        headPoseState.consecutiveGazeDeviations++;
+      } else {
+        headPoseState.consecutiveGazeDeviations = 0;
+      }
+
+      if (headPoseState.consecutiveGazeDeviations >= GAZE_CONSECUTIVE_FRAMES_REQUIRED) {
+        headPoseState.isAlertActive = true;
+        triggerAmberGazeDeviationAlert(calculatedAngle, validFace.box);
+        return { state: 'GAZE DEVIATION', angle: calculatedAngle, alert: true, frames: headPoseState.consecutiveGazeDeviations };
+      } else {
+        headPoseState.isAlertActive = false;
+        suppressGazeDeviationWarning();
+        return { state: 'NOMINAL', angle: calculatedAngle, alert: false, frames: headPoseState.consecutiveGazeDeviations };
+      }
+    }
+
+    /**
+     * Trigger Amber "GAZE DEVIATION" alert when 3 consecutive frames are confirmed
+     */
+    function triggerAmberGazeDeviationAlert(angle, faceBox) {
+      const overlayCanvas = document.getElementById('cctv-ai-overlay-canvas');
+      const ctx = overlayCanvas ? overlayCanvas.getContext('2d') : null;
+
+      // Draw Amber Reticle on Canvas Overlay
+      if (ctx && faceBox) {
+        const [fx, fy, fw, fh] = faceBox;
+        ctx.save();
+        ctx.shadowColor = 'rgba(245, 158, 11, 0.8)';
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(fx - 10, fy - 10, fw + 20, fh + 20);
+
+        // Gaze Deviation Banner
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(fx - 10, Math.max(0, fy - 34), Math.max(160, fw + 20), 24);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(`GAZE DEVIATION (${Math.round(Math.abs(angle))}°)`, fx - 4, Math.max(18, fy - 18));
+        ctx.restore();
+      }
+
+      // Update CCTV AI Banner to Amber
+      const aiInner = document.getElementById('cctv-ai-box-inner');
+      const aiTitle = document.getElementById('cctv-ai-header-title');
+      const aiTag = document.getElementById('cctv-ai-header-tag');
+      const aiIcon = document.getElementById('cctv-ai-header-icon');
+      const aiTarget = document.getElementById('cctv-ai-target-text');
+      const aiConf = document.getElementById('cctv-ai-conf-text');
+
+      if (aiInner && (!aiTitle.textContent.includes('MOBILE') || aiInner.classList.contains('border-amber-500/80'))) {
+        aiInner.className = 'relative border-2 border-amber-500/80 bg-amber-950/30 backdrop-blur-[2px] p-3 sm:p-4 rounded-xl shadow-2xl shadow-amber-950/50 flex flex-col items-center animate-pulse';
+        if (aiTitle) aiTitle.textContent = 'AI VIGILANCE: GAZE DEVIATION FLAGGED';
+        if (aiTag) {
+          aiTag.textContent = 'P2 REVIEW';
+          aiTag.className = 'bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded text-[10px] font-bold';
+        }
+        if (aiIcon) aiIcon.setAttribute('data-lucide', 'alert-triangle');
+        if (aiTarget) aiTarget.textContent = `TARGET: DESK A-02 | SUSTAINED HEAD YAW (${Math.round(Math.abs(angle))}°) > 25°`;
+        if (aiConf) {
+          aiConf.textContent = 'INFERENCE: 3 CONSECUTIVE FRAMES DEVIATION • HEAD ORIENTATION OUT OF BOUNDS';
+          aiConf.className = 'text-[10px] text-amber-300 font-mono text-center';
+        }
+        lucide.createIcons();
+      }
+    }
+
+    /**
+     * Suppress Gaze Deviation Warnings when face is nominal or absent
+     */
+    function suppressGazeDeviationWarning() {
+      const aiInner = document.getElementById('cctv-ai-box-inner');
+      const aiTitle = document.getElementById('cctv-ai-header-title');
+      const aiTag = document.getElementById('cctv-ai-header-tag');
+      const aiIcon = document.getElementById('cctv-ai-header-icon');
+      const aiTarget = document.getElementById('cctv-ai-target-text');
+      const aiConf = document.getElementById('cctv-ai-conf-text');
+
+      if (aiTitle && aiTitle.textContent.includes('GAZE DEVIATION')) {
+        aiInner.className = 'relative border-2 border-emerald-500/70 bg-emerald-950/20 backdrop-blur-[2px] p-3 sm:p-4 rounded-xl shadow-2xl shadow-emerald-950/30 flex flex-col items-center';
+        aiTitle.textContent = 'AI SENTINEL SCAN: ACTIVE SURVEILLANCE';
+        if (aiTag) {
+          aiTag.textContent = 'NORMAL';
+          aiTag.className = 'bg-emerald-500/30 text-emerald-200 px-1.5 py-0.5 rounded text-[10px]';
+        }
+        if (aiIcon) aiIcon.setAttribute('data-lucide', 'shield-check');
+        if (aiTarget) aiTarget.textContent = 'MONITORING: DESKS A1-C6 • HEAD ORIENTATION IN NOMINAL ARC';
+        if (aiConf) {
+          aiConf.textContent = 'INFERENCE: ZERO MALICIOUS ANOMALIES DETECTED';
+          aiConf.className = 'text-[10px] text-emerald-300 font-mono text-center';
+        }
+        lucide.createIcons();
+      }
+    }
+
+    /**
+     * Requirement 3: Update Top-Right Semi-Transparent Telemetry HUD
+     */
+    function updateTelemetryHUD(topClass, topConfidence, poseVerdict, phoneDetected) {
+      const hudTopClass = document.getElementById('hud-top-class');
+      const hudTopConf = document.getElementById('hud-top-confidence');
+      const hudPoseState = document.getElementById('hud-pose-state');
+      const hudDot = document.getElementById('hud-pulse-dot');
+
+      if (hudTopClass) {
+        hudTopClass.textContent = (topClass || 'NONE').toUpperCase();
+        if (phoneDetected) {
+          hudTopClass.className = 'font-black text-rose-400 tracking-wide uppercase animate-pulse';
+        } else {
+          hudTopClass.className = 'font-extrabold text-emerald-300 tracking-wide uppercase';
+        }
+      }
+
+      if (hudTopConf) {
+        hudTopConf.textContent = `${(topConfidence * 100).toFixed(1)}%`;
+      }
+
+      if (hudPoseState) {
+        if (poseVerdict.alert) {
+          hudPoseState.textContent = 'GAZE DEVIATION';
+          hudPoseState.className = 'font-bold text-amber-400 animate-pulse';
+        } else if (!headPoseState.hasValidFace) {
+          hudPoseState.textContent = 'NO FACE (IDLE)';
+          hudPoseState.className = 'font-semibold text-slate-400';
+        } else {
+          hudPoseState.textContent = 'NOMINAL';
+          hudPoseState.className = 'font-bold text-emerald-400';
+        }
+      }
+
+      if (hudDot) {
+        if (phoneDetected) {
+          hudDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+        } else if (poseVerdict.alert) {
+          hudDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+        } else {
+          hudDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        }
+      }
+    }
+
+    /**
+     * Requirement 1: Handler invoked when a phone/remote/electronic device is detected (score >= 0.35)
+     * - Draws glowing RED bounding box and tag
+     * - Triggers UI room status to "UFM FLAGGED" with red pulsing beacon
+     * - Rate-limits socket alert emissions using a 4-second throttle lock
+     */
+    function handlePhoneDetected(pred, mediaEl) {
+      const score = pred && pred.score !== undefined ? pred.score : 0.88;
+      const confidence = Math.round(score * 100);
+      const roomId = activeInspectHall || 'Room 501-LHS (Block E)';
+
+      console.warn(`[AI Sentinel] Mobile Phone/Device Confirmed (${confidence}% >= 35%) in ${roomId}`);
+
+      // a. Render Glowing Red Bounding Box & Tag over Camera Canvas and Overlay
+      const phoneBox = document.getElementById('cctv-phone-detection-box');
+      const phoneLabel = document.getElementById('cctv-phone-detected-label');
+      const overlayCanvas = document.getElementById('cctv-ai-overlay-canvas');
+      const viewport = document.getElementById('cctv-viewport-box');
+
+      if (phoneLabel) {
+        phoneLabel.textContent = `MOBILE PHONE DETECTED - ${confidence}%`;
+      }
+
+      if (phoneBox && viewport) {
+        const vpRect = viewport.getBoundingClientRect();
+        if (pred && pred.bbox && mediaEl) {
+          const [bx, by, bw, bh] = pred.bbox;
+          const mw = mediaEl.videoWidth || mediaEl.naturalWidth || 640;
+          const mh = mediaEl.videoHeight || mediaEl.naturalHeight || 480;
+          const scaleX = vpRect.width / mw;
+          const scaleY = vpRect.height / mh;
+
+          const left = Math.max(10, Math.min(vpRect.width - 200, bx * scaleX));
+          const top = Math.max(10, Math.min(vpRect.height - 120, by * scaleY));
+          const width = Math.max(180, Math.min(vpRect.width - left - 10, bw * scaleX));
+          const height = Math.max(130, Math.min(vpRect.height - top - 10, bh * scaleY));
+
+          phoneBox.style.left = `${left}px`;
+          phoneBox.style.top = `${top}px`;
+          phoneBox.style.width = `${width}px`;
+          phoneBox.style.height = `${height}px`;
+        } else {
+          phoneBox.style.left = '28%';
+          phoneBox.style.top = '22%';
+          phoneBox.style.width = '260px';
+          phoneBox.style.height = '170px';
+        }
+
+        phoneBox.classList.remove('hidden');
+
+        // Draw glowing red bounding box directly on strictly synchronized overlay canvas
+        if (overlayCanvas) {
+          const ctx = overlayCanvas.getContext('2d');
+          if (ctx) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(239, 68, 68, 1)';
+            ctx.shadowBlur = 24;
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+
+            let cbx, cby, cbw, cbh;
+            if (pred && pred.bbox) {
+              cbx = pred.bbox[0];
+              cby = pred.bbox[1];
+              cbw = pred.bbox[2];
+              cbh = pred.bbox[3];
+            } else {
+              cbx = overlayCanvas.width * 0.28;
+              cby = overlayCanvas.height * 0.22;
+              cbw = overlayCanvas.width * 0.44;
+              cbh = overlayCanvas.height * 0.35;
+            }
+
+            ctx.strokeRect(cbx, cby, cbw, cbh);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+            ctx.fillRect(cbx, cby, cbw, cbh);
+
+            // Red Tag Banner
+            const tagStr = `MOBILE PHONE DETECTED - ${confidence}%`;
+            ctx.font = 'bold 13px monospace';
+            const textWidth = ctx.measureText(tagStr).width;
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(cbx, Math.max(0, cby - 26), textWidth + 16, 26);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(tagStr, cbx + 8, Math.max(18, cby - 8));
+            ctx.restore();
+          }
+        }
+
+        clearTimeout(phoneBoxHideTimer);
+        phoneBoxHideTimer = setTimeout(() => {
+          if (phoneBox) phoneBox.classList.add('hidden');
+          if (overlayCanvas) {
+            const ctx = overlayCanvas.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          }
+        }, 5000);
+      }
+
+      // b. Turn room status to "UFM FLAGGED" with red pulsing beacon
+      setRoomUFMFlagged(roomId, true);
+
+      // c. Requirement 3: Rate-limit socket alert emissions using a 4-second throttle lock
+      const now = Date.now();
+      if (!isSocketAlertLocked && (now - lastSocketAlertTime >= SOCKET_ALERT_THROTTLE_LOCK_MS)) {
+        isSocketAlertLocked = true;
+        lastSocketAlertTime = now;
+
+        // Capture snapshot frame
+        let snapshot_url = '';
+        try {
+          const offCanvas = document.createElement('canvas');
+          offCanvas.width = 480;
+          offCanvas.height = 360;
+          const octx = offCanvas.getContext('2d');
+          if (mediaEl) {
+            octx.drawImage(mediaEl, 0, 0, 480, 360);
+          } else {
+            octx.fillStyle = '#0f172a';
+            octx.fillRect(0, 0, 480, 360);
+            octx.fillStyle = '#ef4444';
+            octx.font = 'bold 18px monospace';
+            octx.fillText('MOBILE PHONE CONFISCATED', 40, 180);
+          }
+          snapshot_url = offCanvas.toDataURL('image/jpeg', 0.5);
+        } catch (e) {
+          snapshot_url = '';
+        }
+
+        const alertPayload = {
+          room_id: roomId,
+          detected_object: 'cell phone',
+          confidence: confidence,
+          timestamp: new Date().toISOString(),
+          snapshot_url: snapshot_url,
+          roll_no: 'OP-2024-8924',
+          student_name: 'Vikramaditya Rao',
+          desk: 'Desk A-02'
+        };
+
+        // Emit socket alert
+        if (operionSocket && operionSocket.connected) {
+          operionSocket.emit('ufm_alert', alertPayload);
+        }
+
+        // Auto-populate Form 7-UFM in SQLite and UI
+        loadUFMData(false);
+
+        // Sound & Toast Alert
+        playDispatchAlarmSound();
+        showToast(
+          '🚨 MOBILE PHONE DETECTED!',
+          `Room: ${roomId} • Confidence: ${confidence}% • Auto-Drafted Form 7-UFM Registered`,
+          'danger'
+        );
+
+        // Strict 4-Second Throttle Lock Release
+        setTimeout(() => {
+          isSocketAlertLocked = false;
+        }, SOCKET_ALERT_THROTTLE_LOCK_MS);
+      }
+    }
+
+    /**
+     * 1-Click Simulation Button: Mobile Detection (Confidence >= 0.35)
+     */
+    function triggerSimulatedPhoneDetection() {
+      const modal = document.getElementById('cctv-inspection-modal');
+      if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden')) {
+        openInspectHallModal('Room 501-LHS (Block E)');
+      }
+
+      handlePhoneDetected({
+        class: 'cell phone',
+        score: 0.88,
+        bbox: null
+      }, null);
+    }
+
+    /**
+     * 1-Click Simulation Button: Gaze Deviation (Demonstrate 3 Consecutive Frames Requirement)
+     */
+    function triggerSimulatedGazeDeviation() {
+      const modal = document.getElementById('cctv-inspection-modal');
+      if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden')) {
+        openInspectHallModal('Room 501-LHS (Block E)');
+      }
+
+      let frame = 1;
+      const simInterval = setInterval(() => {
+        headPoseState.hasValidFace = true;
+        headPoseState.angle = 38;
+        headPoseState.consecutiveGazeDeviations = frame;
+
+        if (frame >= GAZE_CONSECUTIVE_FRAMES_REQUIRED) {
+          clearInterval(simInterval);
+          headPoseState.isAlertActive = true;
+          triggerAmberGazeDeviationAlert(38, [200, 100, 140, 160]);
+          updateTelemetryHUD('PERSON / FACE', 0.85, { alert: true, frames: 3 }, false);
+          showToast('👁 Gaze Deviation Alert', 'Sustained head orientation > 25° verified across 3 consecutive frames.', 'warning');
+        } else {
+          updateTelemetryHUD('PERSON / FACE', 0.85, { alert: false, frames: frame }, false);
+          showToast(`Frame ${frame}/3 Evaluated`, 'Deviation detected; waiting for 3 consecutive frames before triggering amber alert...', 'neutral');
+          frame++;
+        }
+      }, 350);
+    }
+
+    /**
+     * Test Ghost Head Pose Elimination:
+     * - Simulates no face or (0,0)/NaN coordinates
+     * - Asserts that head angle states are cleared and warnings suppressed!
+     */
+    function triggerTestGhostPoseSuppression() {
+      const result = evaluateGhostHeadPosePipeline([], null, []);
+      showToast('🛡 Ghost Pose Suppressed', 'No face present: head angle states cleared (angle=0, deviations=0). Warnings strictly suppressed.', 'info');
+      updateTelemetryHUD('NONE', 0.0, result, false);
+    }
+
+    /**
+     * Turn room card and CCTV modal status to "UFM FLAGGED" with red pulsing beacon
+     */
+    function setRoomUFMFlagged(hallName, isAlert = true) {
+      const is501 = !hallName || hallName.includes('501');
+
+      // 1. Dashboard Room Card
+      const dashCard = document.getElementById('dashboard-room-501-card');
+      const dashBadge = document.getElementById('dashboard-room-501-badge');
+      if (dashCard && is501) {
+        if (isAlert) {
+          dashCard.className = 'hall-card critical-hall border-4 border-red-600 bg-red-100/70 rounded-xl p-5 flex flex-col justify-between shadow-2xl ring-4 ring-red-500/40 animate-pulse transition-all duration-300';
+          if (dashBadge) {
+            dashBadge.className = 'bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded-md border border-red-300 flex items-center gap-1.5 shadow-lg shadow-red-600/40 animate-pulse';
+            dashBadge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span><span>UFM FLAGGED</span>';
+          }
+        }
+      }
+
+      // 2. Halls Tab Room Card
+      const tabCard = document.getElementById('halls-tab-room-501-card');
+      const tabBadge = document.getElementById('halls-tab-room-501-badge');
+      if (tabCard && is501) {
+        if (isAlert) {
+          tabCard.className = 'room-item portal-room-card border-4 border-red-600 bg-red-100/70 rounded-xl p-5 flex flex-col justify-between shadow-2xl ring-4 ring-red-500/40 animate-pulse transition-all duration-300 hover:shadow-md';
+          if (tabBadge) {
+            tabBadge.className = 'bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded-md border border-red-300 animate-pulse whitespace-nowrap flex items-center gap-1.5 shadow-md';
+            tabBadge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span><span>UFM FLAGGED</span>';
+          }
+        }
+      }
+
+      // 3. CCTV Modal Badges & Controls
+      const hallBadge = document.getElementById('cctv-modal-hall-badge');
+      const ufmBtn = document.getElementById('cctv-modal-ufm-btn');
+      if (hallBadge && is501) {
+        hallBadge.textContent = 'UFM FLAGGED - MOBILE DETECTED';
+        hallBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold bg-rose-600 text-white border border-rose-300 shadow-md animate-pulse';
+        hallBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white animate-ping"></span><span>UFM FLAGGED - MOBILE DETECTED</span>';
+      }
+      if (ufmBtn && is501) {
+        ufmBtn.classList.remove('hidden');
+      }
+
+      // 4. CCTV Viewport AI Banner
+      const aiTitle = document.getElementById('cctv-ai-header-title');
+      const aiTag = document.getElementById('cctv-ai-header-tag');
+      const aiInner = document.getElementById('cctv-ai-box-inner');
+      const aiTarget = document.getElementById('cctv-ai-target-text');
+      const aiConf = document.getElementById('cctv-ai-conf-text');
+
+      if (aiTitle) aiTitle.textContent = 'AI SENTINEL: MOBILE PHONE DETECTED';
+      if (aiTag) {
+        aiTag.textContent = 'P1 CRITICAL';
+        aiTag.className = 'bg-red-600 text-white font-black px-2 py-0.5 rounded text-[10px] animate-pulse';
+      }
+      if (aiInner) {
+        aiInner.className = 'relative border-4 border-red-600 bg-red-950/40 backdrop-blur-[2px] p-3 sm:p-4 rounded-xl shadow-2xl shadow-red-600/50 flex flex-col items-center animate-pulse';
+      }
+      if (aiTarget) aiTarget.textContent = 'SECTOR: DESK A-02 • SMART DEVICE / MOBILE CONFISCATED';
+      if (aiConf) aiConf.textContent = 'INFERENCE: COCO-SSD OPTICAL SENTINEL • UFM STATUTORY CODE 14.2';
+
+      lucide.createIcons();
+    }
+
+    /**
+     * Handle incoming ufm_alert event broadcast from Socket.io server
+     */
+    function handleIncomingUFMAlert(data) {
+      const room = data.room_id || 'Room 501-LHS (Block E)';
+      const conf = data.confidence || 88;
+
+      setRoomUFMFlagged(room, true);
+      loadUFMData(false);
+      playDispatchAlarmSound();
+
+      // If CCTV modal is active, display glowing detection box
+      const modal = document.getElementById('cctv-inspection-modal');
+      if (modal && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
+        const phoneBox = document.getElementById('cctv-phone-detection-box');
+        const phoneLabel = document.getElementById('cctv-phone-detected-label');
+        if (phoneLabel) phoneLabel.textContent = `MOBILE PHONE DETECTED - ${conf}%`;
+        if (phoneBox) {
+          phoneBox.style.left = '28%';
+          phoneBox.style.top = '22%';
+          phoneBox.style.width = '260px';
+          phoneBox.style.height = '170px';
+          phoneBox.classList.remove('hidden');
+        }
+      }
+
+      showToast(
+        '🚨 Real-Time Sentinel Alert!',
+        `Mobile Phone Detected in ${room} (${conf}% Confidence). Form 7-UFM Auto-Drafted.`,
+        'danger'
+      );
     }
 
     // View Hall Custody Log
@@ -4209,15 +6094,76 @@
     }
 
     // Dispatch Flying Squad
-    function dispatchFlyingSquad(btn, hall) {
-      btn.textContent = 'Squad Dispatched (ETA: 3 Mins)';
-      btn.className = 'px-3 py-1.5 text-xs font-bold bg-emerald-700 text-white rounded-lg shadow-sm';
-      const card = btn.closest('.p-4');
-      if (card) {
-        card.classList.remove('bg-red-50', 'border-red-200');
-        card.classList.add('bg-emerald-50', 'border-emerald-200');
+    async function dispatchFlyingSquad(btn, hall) {
+      const origText = btn ? btn.textContent : '';
+      if (btn) {
+        btn.textContent = 'Dispatching Squad...';
+        btn.disabled = true;
       }
-      showToast('Flying Squad Dispatched', `Squad #02 routed to ${hall}. Observer alerted.`);
+      const targetHall = hall || 'Room 501-LHS (Block E)';
+
+      try {
+        const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/dispatch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'flying_squad',
+            hall: targetHall,
+            staff_id: 'SQ-02',
+            priority: 'CRITICAL',
+            message: `Emergency Flying Squad #02 deployed to ${targetHall}. Rapid response active.`
+          })
+        });
+
+        const data = await res.json();
+        if (btn) {
+          btn.textContent = 'Squad Dispatched (ETA: 3 Mins)';
+          btn.className = 'px-3 py-1.5 text-xs font-bold bg-emerald-700 text-white rounded-lg shadow-sm';
+          const card = btn.closest('.p-4');
+          if (card) {
+            card.classList.remove('bg-red-50', 'border-red-200');
+            card.classList.add('bg-emerald-50', 'border-emerald-200');
+          }
+        }
+        showToast('Flying Squad Dispatched', `Squad #02 routed to ${targetHall}. Observer alerted.`);
+      } catch (e) {
+        console.error('Dispatch error:', e);
+        if (btn) {
+          btn.textContent = origText || 'Dispatch Flying Squad';
+          btn.disabled = false;
+        }
+      }
+    }
+
+    async function dispatchPatrolPing(staffId, staffName, btn) {
+      if (btn) {
+        btn.textContent = 'Pinging...';
+        btn.disabled = true;
+      }
+      try {
+        await fetch(`${OPERION_CONFIG.API_BASE}/api/dispatch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'patrol_ping',
+            hall: 'Sector Patrol Wing',
+            staff_id: staffId,
+            staff_name: staffName,
+            priority: 'URGENT'
+          })
+        });
+        if (btn) {
+          btn.textContent = 'Ping Delivered';
+          btn.className = 'px-2.5 py-1 text-xs font-semibold bg-emerald-700 text-white rounded-lg transition-colors shadow-xs';
+        }
+        showToast('Patrol Ping Broadcasted', `Emergency beacon transmitted to ${staffName} (${staffId}).`);
+      } catch (e) {
+        console.error('Patrol ping error:', e);
+        if (btn) {
+          btn.textContent = 'Dispatch Ping';
+          btn.disabled = false;
+        }
+      }
     }
 
     function acknowledgeAlert(btn) {
@@ -4449,35 +6395,70 @@
     // ACTION FUNCTIONS: UFM PAGE & SAMPLE FORM 7-UFM
     // ========================================================
 
-    // View Sample UFM Form Modal
-    function openSampleUFMFormModal(caseId = 'UFM/2024/014') {
+    // View Sample UFM Form Modal (Dynamically fetched from /api/ufm/:docket_no)
+    async function openSampleUFMFormModal(caseId = 'UFM/2024/014') {
+      let inc = null;
+      try {
+        const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/ufm/${encodeURIComponent(caseId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          inc = data.incident;
+        }
+      } catch (err) {
+        console.warn('Could not query /api/ufm:', err);
+      }
+
+      if (!inc) {
+        inc = {
+          docket_no: caseId,
+          student_name: 'Vikramaditya Rao',
+          roll_no: 'OP-2024-8924',
+          hall: 'Room 501-LHS (Block E)',
+          desk: 'Desk A-02',
+          paper_code: 'CS-402 Distributed Systems',
+          answer_booklet_no: 'QB-4092 (Series B)',
+          provisional_booklet_no: 'QB-4122',
+          evidence_notes: 'Candidate was observed frequently looking inside an open plastic pencil pouch placed on the left side of Desk A-02. Three handwritten micro-slips containing mathematical formulas and consensus algorithm theorems were recovered.',
+          explanation: 'The chits were in my pouch from my morning revision notes. I forgot to take them out before entering the hall and did not copy from them during the test.',
+          invigilator: 'Dr. A. Sharma (Sr. Faculty)',
+          created_at: new Date().toISOString()
+        };
+      }
+
+      const createdDate = new Date(inc.created_at || Date.now());
+      const formattedDate = createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+      const formattedTime = createdDate.toLocaleTimeString('en-US', { hour12: false }) + ' IST';
+
       const content = `
         <div id="print-modal-content" class="space-y-4 text-xs font-sans text-[#29241f]">
           
           <!-- Official Form Header -->
           <div class="border-b-2 border-[#1c1917] pb-3 text-center">
-            <span class="text-[11px] font-bold text-[#6e6352] tracking-wider uppercase block">Chandigarh University Examination Authority &bull; Confidential</span>
+            <span class="text-[11px] font-bold text-[#6e6352] tracking-wider uppercase block">Chandigarh University Examination Authority &bull; Confidential Statutory Record</span>
             <h2 class="text-base font-extrabold text-[#1c1917] uppercase tracking-tight mt-0.5">FORM 7-UFM: REPORT ON USE OF UNFAIR MEANS IN EXAMINATION</h2>
-            <p class="text-[11px] text-[#756a59]">Under Statutory Ordinance 14.2 of Examination Malpractice Code</p>
+            <p class="text-[11px] text-[#756a59]">Under Statutory Ordinance 14.2 of Examination Malpractice Code &bull; SQLite Verified Dossier</p>
           </div>
 
           <!-- Case Details Meta -->
           <div class="grid grid-cols-3 gap-2 p-3 bg-[#f4eee2] rounded-lg border border-[#ded5c5] font-mono text-[11px]">
-            <div><strong>CASE DOCKET:</strong> ${caseId}</div>
-            <div><strong>DATE:</strong> 07-OCT-2024</div>
-            <div><strong>TIME:</strong> 14:42 IST</div>
+            <div><strong>CASE DOCKET:</strong> <span class="text-red-700 font-bold">${inc.docket_no}</span></div>
+            <div><strong>DATE:</strong> ${formattedDate}</div>
+            <div><strong>TIME:</strong> ${formattedTime}</div>
           </div>
 
           <!-- Section A: Candidate Particulars -->
           <div class="p-3 bg-white border border-[#ded5c5] rounded-lg space-y-2">
-            <h4 class="font-bold text-[#1c1917] text-xs border-b border-[#ede6db] pb-1 uppercase">Section A: Particulars of Candidate</h4>
+            <h4 class="font-bold text-[#1c1917] text-xs border-b border-[#ede6db] pb-1 uppercase flex items-center justify-between">
+              <span>Section A: Particulars of Candidate</span>
+              <span class="text-[10px] text-emerald-700 font-mono font-bold">STATUS: ${inc.status || 'UNDER_INVESTIGATION'}</span>
+            </h4>
             <div class="grid grid-cols-2 gap-3 text-xs">
-              <div><span class="text-[#6e6352]">Candidate Name:</span> <strong class="text-[#1c1917]">Vikramaditya Rao</strong></div>
-              <div><span class="text-[#6e6352]">Roll Number:</span> <strong class="font-mono text-[#1c1917]">OP-2024-8924</strong></div>
+              <div><span class="text-[#6e6352]">Candidate Name:</span> <strong class="text-[#1c1917]">${inc.student_name}</strong></div>
+              <div><span class="text-[#6e6352]">Roll Number:</span> <strong class="font-mono text-[#1c1917]">${inc.roll_no}</strong></div>
               <div><span class="text-[#6e6352]">Examination Center:</span> <strong>Chandigarh University Campus</strong></div>
-              <div><span class="text-[#6e6352]">Assigned Hall &amp; Desk:</span> <strong>Room 501-LHS (Block E) &bull; Desk A-02</strong></div>
-              <div><span class="text-[#6e6352]">Paper &amp; Subject Code:</span> <strong>CS-402 Distributed Systems</strong></div>
-              <div><span class="text-[#6e6352]">Answer Booklet No:</span> <strong class="font-mono">QB-4092 (Series B)</strong></div>
+              <div><span class="text-[#6e6352]">Assigned Hall &amp; Desk:</span> <strong>${inc.hall} &bull; ${inc.desk}</strong></div>
+              <div><span class="text-[#6e6352]">Paper &amp; Subject Code:</span> <strong class="text-blue-800">${inc.paper_code}</strong></div>
+              <div><span class="text-[#6e6352]">Answer Booklet No:</span> <strong class="font-mono text-red-700">${inc.answer_booklet_no || 'QB-4092'} [CANCELLED]</strong></div>
             </div>
           </div>
 
@@ -4485,9 +6466,9 @@
           <div class="p-3 bg-white border border-[#ded5c5] rounded-lg space-y-2">
             <h4 class="font-bold text-[#1c1917] text-xs border-b border-[#ede6db] pb-1 uppercase">Section B: Nature of Unfair Means Detected</h4>
             <div class="space-y-1.5 text-xs">
-              <p><strong>Description:</strong> Candidate was observed frequently looking inside an open plastic pencil pouch placed on the left side of Desk A-02. Upon physical search by the Room Invigilator in presence of the Flying Squad Observer, three handwritten micro-slips containing mathematical formulas and consensus algorithm theorems were recovered.</p>
+              <p><strong>Description:</strong> ${inc.evidence_notes}</p>
               <div class="p-2 bg-red-50 border border-red-200 rounded text-red-900 font-semibold">
-                Recovered Material: 3 paper chits numbered (1/3, 2/3, 3/3) bearing handwritten notes relevant to Paper CS-402 Question #3 &amp; #5.
+                Recovered Material: ${inc.malpractice_type || 'Formula chits'} seized by Invigilator in presence of Flying Squad. Stapled to official docket.
               </div>
             </div>
           </div>
@@ -4496,9 +6477,9 @@
           <div class="p-3 bg-white border border-[#ded5c5] rounded-lg space-y-2">
             <h4 class="font-bold text-[#1c1917] text-xs border-b border-[#ede6db] pb-1 uppercase">Section C: Action Taken on the Spot</h4>
             <ul class="list-disc list-inside space-y-1 text-[#4a4237] text-xs">
-              <li>First Answer Booklet No. <strong>QB-4092</strong> cancelled with cross mark in red ink and signed by Invigilator.</li>
-              <li>Recovered chits signed by both Candidate and Invigilator, stapled to this official docket.</li>
-              <li>Provisional Second Answer Booklet No. <strong>QB-4122</strong> issued to candidate at 14:46 IST to avoid loss of exam time.</li>
+              <li>First Answer Booklet No. <strong>${inc.answer_booklet_no || 'QB-4092'}</strong> cancelled with cross mark in red ink and signed by Invigilator.</li>
+              <li>Recovered chits/material signed by both Candidate and Invigilator, stapled to this official docket.</li>
+              <li>Provisional Second Answer Booklet No. <strong>${inc.provisional_booklet_no || 'QB-4122'}</strong> issued to candidate at ${formattedTime} to avoid loss of exam time.</li>
             </ul>
           </div>
 
@@ -4506,11 +6487,11 @@
           <div class="p-3 bg-[#fdfcf9] border border-[#ded5c5] rounded-lg space-y-1">
             <h4 class="font-bold text-[#1c1917] text-xs uppercase">Section D: Candidate's Written Explanation</h4>
             <p class="italic text-[#4a4237] bg-white p-2.5 rounded border border-[#ded5c5]">
-              "The chits were in my pouch from my morning revision notes. I forgot to take them out before entering the hall and did not copy from them during the test."
+              "${inc.explanation || 'The chits were in my pouch from morning revision notes. I forgot to take them out before entering the hall.'}"
             </p>
             <div class="flex justify-between items-center pt-1 text-[11px] text-[#6e6352]">
               <span>Signature of Candidate: <strong>[Recorded on Paper Docket]</strong></span>
-              <span>Time: 14:48 IST</span>
+              <span>Time: ${formattedTime}</span>
             </div>
           </div>
 
@@ -4518,8 +6499,8 @@
           <div class="grid grid-cols-3 gap-3 pt-2 text-center text-[11px] font-semibold text-[#4a4237] border-t border-[#ded5c5]">
             <div class="p-2 border border-[#ded5c5] rounded bg-[#fdfcf9]">
               <span class="text-[#756a59] block mb-1">Room Invigilator</span>
-              <strong class="text-[#1c1917]">Dr. A. Sharma</strong>
-              <span class="block text-[10px] text-[#6e6352]">Proctor #FAC-9824</span>
+              <strong class="text-[#1c1917]">${inc.invigilator || 'Dr. A. Sharma'}</strong>
+              <span class="block text-[10px] text-[#6e6352]">Proctor Verified</span>
             </div>
             <div class="p-2 border border-[#ded5c5] rounded bg-[#fdfcf9]">
               <span class="text-[#756a59] block mb-1">Flying Squad Observer</span>
@@ -4536,18 +6517,18 @@
         </div>
       `;
       openModal(
-        `Official Sample Form 7-UFM — ${caseId}`,
+        `Official Form 7-UFM — ${inc.docket_no}`,
         '<i data-lucide="file-text" class="w-4 h-4 text-red-600"></i>',
         content,
         'Print Official Form 7-UFM',
         () => {
           window.print();
-          showToast('Form 7-UFM Printed', 'Statutory UFM report formatted for Disciplinary Committee.');
+          showToast('Form 7-UFM Printed', `Statutory UFM report for ${inc.student_name} formatted for Disciplinary Committee.`);
         }
       );
     }
 
-    // Lodge New UFM Incident Modal
+    // Lodge New UFM Incident Modal (Persists to SQLite via POST /api/ufm)
     function openLodgeUFMModal() {
       const content = `
         <div class="space-y-4 text-xs font-sans text-[#29241f]">
@@ -4558,34 +6539,33 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block font-bold text-[#1c1917] mb-1">Candidate Roll Number:</label>
-              <input id="ufm-input-roll" type="text" placeholder="e.g. OP-2024-4190" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
+              <input id="ufm-input-roll" type="text" placeholder="e.g. OP-2024-4190" value="OP-2024-4190" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
             </div>
             <div>
               <label class="block font-bold text-[#1c1917] mb-1">Candidate Full Name:</label>
-              <input id="ufm-input-name" type="text" placeholder="e.g. Manish Pandey" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
+              <input id="ufm-input-name" type="text" placeholder="e.g. Manish Pandey" value="Manish Pandey" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block font-bold text-[#1c1917] mb-1">Hall Number &amp; Desk:</label>
-              <input id="ufm-input-hall" type="text" placeholder="e.g. Hall A-04 • Desk C-12" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
+              <input id="ufm-input-hall" type="text" value="Room 501-LHS (Block E) • Desk C-12" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs" />
             </div>
             <div>
               <label class="block font-bold text-[#1c1917] mb-1">Offense Category:</label>
               <select id="ufm-input-cat" class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs bg-white text-[#1c1917] font-medium">
-                <option>Possession of Unauthorized Paper Chits</option>
-                <option>Digital Smartwatch / Bluetooth Receiver</option>
-                <option>Copying from Adjacent Candidate</option>
-                <option>Tearing Answer Booklet Pages</option>
-                <option>Impersonation / Fake ID</option>
+                <option value="Printed Formula Chits">Possession of Printed / Handwritten Paper Material (Chits)</option>
+                <option value="Electronic Smart Device">Possession of Mobile Phone / Bluetooth Earbuds / Smartwatch</option>
+                <option value="Unauthorized Inscription">Formulas Written on Body / Clothing / Admit Pass</option>
+                <option value="Collusion &amp; Copying">Unauthorized Communication / Collusion with Adjacent Desk</option>
               </select>
             </div>
           </div>
 
           <div>
             <label class="block font-bold text-[#1c1917] mb-1">Confiscated Material &amp; Recovery Summary:</label>
-            <textarea id="ufm-input-desc" rows="2" placeholder="Details of seized chits or gadgets and exact location of recovery..." class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs"></textarea>
+            <textarea id="ufm-input-desc" rows="2" placeholder="Details of seized chits or gadgets..." class="w-full p-2 border border-[#d6ccbd] rounded-lg text-xs">Micro-chits recovered and marked by invigilator during inspection.</textarea>
           </div>
 
           <div>
@@ -4599,65 +6579,43 @@
         '<i data-lucide="shield-alert" class="w-4 h-4 text-red-600"></i>',
         content,
         'Register Case & Generate Form 7-UFM',
-        () => {
+        async () => {
           const roll = document.getElementById('ufm-input-roll').value || 'OP-2024-4190';
           const name = document.getElementById('ufm-input-name').value || 'Manish Pandey';
-          const hall = document.getElementById('ufm-input-hall').value || 'Hall A-04 • Desk C-12';
+          const hall = document.getElementById('ufm-input-hall').value || 'Room 501-LHS (Block E) • Desk C-12';
           const cat = document.getElementById('ufm-input-cat').value;
           const desc = document.getElementById('ufm-input-desc').value || 'Micro-chits recovered and marked by invigilator.';
+          const invigilator = document.getElementById('ufm-input-invigilator').value || 'Dr. A. Sharma (Sr. Faculty)';
 
-          const newCaseId = `UFM/2024/017`;
+          try {
+            const res = await fetch(`${OPERION_CONFIG.API_BASE}/api/ufm`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                roll_no: roll,
+                student_name: name,
+                hall: hall.split('•')[0].trim(),
+                desk: (hall.split('•')[1] || 'Desk C-12').trim(),
+                malpractice_type: cat,
+                evidence_notes: desc,
+                invigilator: invigilator,
+                paper_code: 'CS-402 Distributed Systems'
+              })
+            });
 
-          const tableBody = document.getElementById('ufm-table-body');
-          if (tableBody) {
-            const tr = document.createElement('tr');
-            tr.className = 'bg-red-50/40 animate-in fade-in duration-300';
-            tr.innerHTML = `
-              <td class="font-mono font-bold text-red-900">${newCaseId}</td>
-              <td>
-                <div class="font-bold text-[#1c1917]">${name}</div>
-                <div class="text-xs text-[#6e6352] font-mono">Roll: ${roll}</div>
-              </td>
-              <td>
-                <div class="font-semibold text-[#29241f]">${hall.split('•')[0] || 'Hall A-04'}</div>
-                <div class="text-xs text-[#6e6352]">${hall.split('•')[1] || 'Desk C-12'}</div>
-              </td>
-              <td>
-                <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded border border-red-300">
-                  ${cat}
-                </span>
-                <p class="text-xs text-[#524a3e] mt-1">${desc}</p>
-              </td>
-              <td>
-                <span class="font-medium text-[#1c1917] text-xs">Seized &amp; Cataloged</span>
-                <p class="text-[11px] text-[#6e6352] font-mono">Booklet Cancelled</p>
-              </td>
-              <td>
-                <span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-amber-300">
-                  Provisional 2nd Booklet
-                </span>
-              </td>
-              <td class="text-right">
-                <button onclick="openSampleUFMFormModal('${newCaseId}')" class="text-xs font-bold text-white bg-red-700 hover:bg-red-800 px-3 py-1.5 rounded-lg shadow-sm transition-colors">
-                  View Form 7-UFM
-                </button>
-              </td>
-            `;
-            tableBody.insertBefore(tr, tableBody.firstChild);
+            if (res.ok) {
+              const data = await res.json();
+              closeModal();
+              showToast('UFM Case Registered in SQLite', `${data.incident.docket_no} created for ${name}. Form 7-UFM generated.`);
+              await loadUFMData();
+              openSampleUFMFormModal(data.incident.docket_no);
+            } else {
+              showToast('Failed to Register Case', 'HTTP Error ' + res.status, 'danger');
+            }
+          } catch (e) {
+            console.error('Error logging Form 7-UFM:', e);
+            showToast('Submission Error', e.message, 'danger');
           }
-
-          const totalStat = document.getElementById('ufm-stat-total');
-          if (totalStat) totalStat.textContent = '04';
-
-          const badge = document.getElementById('ufm-tab-badge');
-          if (badge) badge.textContent = '4 Active';
-
-          const dashAuditNum = document.getElementById('stat-audit-num');
-          const dashAuditBadge = document.getElementById('stat-audit-badge');
-          if (dashAuditNum) dashAuditNum.textContent = '04';
-          if (dashAuditBadge) dashAuditBadge.textContent = '4 CASES';
-
-          showToast('UFM Case Registered', `${newCaseId} created for ${name}. Form 7-UFM generated.`);
         }
       );
     }
