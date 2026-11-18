@@ -2,8 +2,6 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/stream", "destination": "/stream.html" },
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/openapi.json", "destination": "/api/index.js" }
+    { "source": "/openapi.json", "destination": "/api/index" }
   ]
 }

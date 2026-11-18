@@ -36,14 +36,35 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-// Mount REST APIs
+// Explicit route fallbacks for cloud serverless environments
+app.get(['/', '/index.html'], (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  res.sendFile(indexPath);
+});
+
+app.get(['/stream', '/stream.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'stream.html'));
+});
+
+app.get('/sample_students.csv', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sample_students.csv'));
+});
+
+// Mount REST APIs (dual mounting handles both /api/ufm and rewritten /ufm paths)
 app.use('/api/ufm', ufmRoutes);
+app.use('/ufm', ufmRoutes);
+
 app.use('/api/dispatch', dispatchRoutes);
+app.use('/dispatch', dispatchRoutes);
+
 app.use('/api/seating', seatingRoutes);
+app.use('/seating', seatingRoutes);
+
 app.use('/api', operationalRoutes);
+app.use('/', operationalRoutes);
 
 // OpenAPI Spec for Health Checks & Swagger
-app.get('/openapi.json', (req, res) => {
+app.get(['/openapi.json', '/api/openapi.json'], (req, res) => {
   res.json({
     openapi: '3.0.2',
     info: {
