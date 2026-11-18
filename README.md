@@ -328,6 +328,38 @@ Follow these steps to demonstrate and test all features directly in the UI:
 
 ---
 
+## 🚀 Cloud Deployment (Vercel)
+
+OPERION is pre-configured for instant 1-click deployment on **Vercel** serverless infrastructure with:
+- Dedicated serverless function router (`/api/index.js`) handling all REST endpoints (`/api/ufm`, `/api/dispatch`, `/api/seating`, `/api/students`, etc.).
+- Global Edge CDN delivery for static assets (`index.html`, `public/stream.html`, `public/sample_students.csv`).
+- Resilient `/tmp` SQLite storage with automated in-memory fallback.
+- Client-side graceful degradation (automatic REST fallback for UFM logging and state synchronization when WebSockets are unavailable in serverless environments).
+
+### 1-Click Deployment via Vercel Dashboard
+1. Go to [vercel.com/new](https://vercel.com/new).
+2. Connect your GitHub account and import the repository: **`Er-Sampoorn/Operion-project`**.
+3. Keep default settings:
+   - **Framework Preset**: Other
+   - **Root Directory**: `./`
+   - **Build Command**: (leave empty)
+   - **Output Directory**: (leave empty)
+4. Click **Deploy**. Vercel will provision the serverless functions and CDN edge in ~30 seconds.
+
+### Deploying via Vercel CLI
+```bash
+# Install Vercel CLI (if not installed)
+npm i -g vercel
+
+# Log in to Vercel
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
+---
+
 ## License
 
 OPERION is released under the **MIT License**. Copyright © 2024-2026 Chandigarh University Examination Authority & OPERION Core Systems Team.
