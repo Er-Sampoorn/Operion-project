@@ -11,8 +11,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- Socket.io Client -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Socket.io Client (CDN with local fallback) -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>if (typeof io === 'undefined') { document.write('<script src="/socket.io/socket.io.js"><\/script>'); }</script>
 
   <!-- TensorFlow.js, COCO-SSD & BlazeFace Real-Time AI Detection -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
@@ -3299,12 +3300,32 @@
           joinIntercomLine();
         });
 
+        const checkRestCloudStatus = () => {
+          fetch(`${OPERION_CONFIG.API_BASE}/openapi.json`, { cache: 'no-cache' })
+            .then(res => {
+              if (res.ok) {
+                const dot = document.getElementById('backend-status-dot');
+                const text = document.getElementById('backend-status-text');
+                const badge = document.getElementById('backend-status-badge');
+                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+                if (text) text.textContent = 'REST API: Online (Cloud Mode)';
+                if (badge) badge.className = 'cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-colors';
+              }
+            })
+            .catch(() => {});
+        };
+
         operionSocket.on('disconnect', () => {
           console.log('[Operion Socket] Disconnected');
           const dot = document.getElementById('backend-status-dot');
           const text = document.getElementById('backend-status-text');
           if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
           if (text) text.textContent = 'Socket: Reconnecting...';
+          checkRestCloudStatus();
+        });
+
+        operionSocket.on('connect_error', () => {
+          checkRestCloudStatus();
         });
 
         // 1. UFM Events
@@ -5884,9 +5905,26 @@
           desk: 'Desk A-02'
         };
 
-        // Emit socket alert
+        // Emit socket alert (or fall back to REST in Serverless mode)
         if (operionSocket && operionSocket.connected) {
           operionSocket.emit('ufm_alert', alertPayload);
+        } else {
+          // Cloud Serverless Fallback: Register Form 7-UFM incident directly via REST
+          fetch(`${OPERION_CONFIG.API_BASE}/api/ufm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roll_no: alertPayload.roll_no || 'OP-2024-8924',
+              student_name: alertPayload.student_name || 'Vikramaditya Rao',
+              hall: alertPayload.room_id || 'Room 501-LHS (Block E)',
+              desk: alertPayload.desk || 'Desk A-02',
+              malpractice_type: 'Smart Device / Mobile Confiscated',
+              evidence_notes: `AI Optical Sentinel Confirmed Mobile Device (${confidence}% >= 35%). Confiscated during surveillance stream.`,
+              status: 'CONFISCATED_HEARING_PENDING'
+            })
+          }).then(res => res.json()).then(() => {
+            loadUFMData(false);
+          }).catch(e => console.warn('Serverless UFM persistence fallback error:', e));
         }
 
         // Auto-populate Form 7-UFM in SQLite and UI

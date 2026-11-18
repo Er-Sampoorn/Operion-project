@@ -9,8 +9,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Socket.io Client -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Socket.io Client (CDN with local fallback) -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>if (typeof io === 'undefined') { document.write('<script src="/socket.io/socket.io.js"><\/script>'); }</script>
 
   <style>
     body {

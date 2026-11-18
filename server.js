@@ -94,32 +94,37 @@ io.on('connection', (socket) => {
   });
 });
 
-// Periodic Telemetry Heartbeat Broadcast
-setInterval(() => {
-  try {
-    const activeUfmCount = db.prepare(
-      "SELECT COUNT(*) as count FROM ufm_incidents WHERE status NOT IN ('RESOLVED', 'DISMISSED')"
-    ).get().count;
+if (require.main === module) {
+  // Periodic Telemetry Heartbeat Broadcast
+  setInterval(() => {
+    try {
+      const activeUfmCount = db.prepare(
+        "SELECT COUNT(*) as count FROM ufm_incidents WHERE status NOT IN ('RESOLVED', 'DISMISSED')"
+      ).get().count;
 
-    io.emit('telemetry:heartbeat', {
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      activeUFM: activeUfmCount,
-      clientsOnline: io.engine.clientsCount,
-      systemStatus: 'NOMINAL'
-    });
-  } catch (e) {
-    // ignore
-  }
-}, 5000);
+      io.emit('telemetry:heartbeat', {
+        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        activeUFM: activeUfmCount,
+        clientsOnline: io.engine.clientsCount,
+        systemStatus: 'NOMINAL'
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, 5000);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(`  OPERION Exam Operations System Online on Port ${PORT}`);
-  console.log(`  Dashboard:  http://localhost:${PORT}`);
-  console.log(`  Mobile Cam: http://localhost:${PORT}/stream.html`);
-  console.log(`  REST APIs:  http://localhost:${PORT}/api/ufm`);
-  console.log(`=======================================================`);
-});
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(`  OPERION Exam Operations System Online on Port ${PORT}`);
+    console.log(`  Dashboard:  http://localhost:${PORT}`);
+    console.log(`  Mobile Cam: http://localhost:${PORT}/stream.html`);
+    console.log(`  REST APIs:  http://localhost:${PORT}/api/ufm`);
+    console.log(`=======================================================`);
+  });
+}
 
-module.exports = { app, server, io };
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;
+module.exports.io = io;
